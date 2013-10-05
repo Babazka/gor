@@ -32,8 +32,8 @@ type RequestFactory struct {
 // One created, it starts listening for incoming requests: requests channel
 func NewRequestFactory() (factory *RequestFactory) {
 	factory = &RequestFactory{}
-	factory.c_responses = make(chan *HttpResponse)
-	factory.c_requests = make(chan *http.Request)
+	factory.c_responses = make(chan *HttpResponse, 1)
+	factory.c_requests = make(chan *http.Request, 1)
 
 	go factory.handleRequests()
 
