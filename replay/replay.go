@@ -145,7 +145,7 @@ func handlePersistentConnection(conn net.Conn, rf *RequestFactory) error {
 			if request, err := ParseRequest(buf); err != nil {
 				Debug("Error while parsing request", err, buf)
 			} else {
-				Debug("Adding request", buf)
+				Debug("Adding request", request)
 
 				rf.Add(request)
 			}

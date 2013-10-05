@@ -13,6 +13,8 @@ type ForwardHost struct {
 	Limit int
 
 	Stat *RequestStat
+
+	Clients *ClientPool
 }
 
 // ReplaySettings ListenerSettings contain all the needed configuration for setting up the replay
@@ -26,6 +28,8 @@ type ReplaySettings struct {
 	Verbose bool
 
 	PersistentConnections bool
+
+	ClientPoolSize int
 }
 
 var Settings ReplaySettings = ReplaySettings{}
@@ -46,6 +50,10 @@ func (r *ReplaySettings) ForwardedHosts() (hosts []*ForwardHost) {
 
 		host := &ForwardHost{Url: host_info[0]}
 		host.Stat = NewRequestStats(host)
+
+		if r.ClientPoolSize > 0 {
+			host.Clients = NewClientPool(r.ClientPoolSize)
+		}
 
 		if len(host_info) > 1 {
 			host.Limit, _ = strconv.Atoi(host_info[1])
@@ -72,6 +80,8 @@ func init() {
 		defaultHost = "0.0.0.0"
 
 		defaultForwardAddress = "http://localhost:8080"
+
+		defaultClientPoolSize = 0
 	)
 
 	flag.IntVar(&Settings.Port, "p", defaultPort, "specify port number")
@@ -84,4 +94,6 @@ func init() {
 	flag.BoolVar(&Settings.Verbose, "verbose", false, "Log requests")
 
 	flag.BoolVar(&Settings.PersistentConnections, "persistent-connections", false, "Set this option to use together with connection pool in listen servers")
+
+	flag.IntVar(&Settings.ClientPoolSize, "client-pool-size", defaultClientPoolSize, "size of a pool of connections to forward servers (default: no pool, open a connection per request).\n\tUsing a pool allows the usage of HTTP keep-alive when possible.")
 }

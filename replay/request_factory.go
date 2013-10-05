@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"io/ioutil"
+	"sync"
 )
 
 // HttpResponse contains a host, a http request,
@@ -50,8 +52,25 @@ func customCheckRedirect(req *http.Request, via []*http.Request) error {
 
 // sendRequest forwards http request to a given host
 func (f *RequestFactory) sendRequest(host *ForwardHost, request *http.Request) {
-	client := &http.Client{
-		CheckRedirect: customCheckRedirect,
+	var client *http.Client
+
+	if host.Clients != nil {
+		// reuse a connection
+		var client_lock *sync.Mutex
+		client, client_lock = host.Clients.GetClient()
+		client_lock.Lock() // Prevent other goroutines from using this connection.
+						   // http.Client is goroutine-safe, but in its own way:
+						   // when used by 2+ goroutines, it will create new TCP
+						   // connections, not block.
+						   // We do not want this (that's why we created our own pool
+						   // in the first place).
+		defer client_lock.Unlock()
+		// original sniffed request may contain Connection: close, we do not want it
+		request.Header.Del("Connection") // default for HTTP/1.1 assumed keep-alive
+	} else {
+		client = &http.Client{
+			CheckRedirect: customCheckRedirect,
+		}
 	}
 
 	// Change HOST of original request
@@ -66,6 +85,11 @@ func (f *RequestFactory) sendRequest(host *ForwardHost, request *http.Request) {
 
 	if err == nil {
 		defer resp.Body.Close()
+		if host.Clients != nil {
+			// we must read the response completely to make keep-alive work
+			// (partial reads don't seem to work, contrary to the documentation)
+			ioutil.ReadAll(resp.Body)
+		}
 	} else {
 		Debug("Request error:", err)
 	}
