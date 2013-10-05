@@ -55,6 +55,34 @@ You can forward traffic to multiple endpoints. Just separate the addresses by co
 gor replay -f "http://staging.server|10,http://dev.server|5"
 ```
 
+### Persistent connections between listener and replay server
+
+By default, listener opens a new TCP connection to replay server for each captured request.
+This can be undesirable in high-load environments because the listener can quickly exhaust sockets limit on a production server.
+You can make Gor use a fixed number of persistent connections:
+```
+# listener uses 10 persistent connections to replay server...
+gor listen -p 8080 --pool-size=10
+# replay server accepts persistent connections
+gor replay -f "http://staging.server" --persistent-connections
+```
+
+Note that this scheme will not work unless you specify ``--persistent-connections`` when launching the replay server,
+and all the listeners which forward traffic to this replay server must use ``--pool-size`` option.
+
+
+### HTTP Keep-alive between replay server and staging / dev servers
+
+The replay server normally forwards each request in a separate connection.
+As with the listener-replay case described above, this can be undesirable.
+You can enable connection pooling on the replay server and take advantage of HTTP keep-alive (provided your staging / development servers you forward traffic to support keep-alive):
+
+```
+# use 10 persistent connections between replay server and each of the two upstream hosts
+# (20 connections in total)
+gor replay -f "http://staging.server,http://dev.server" --client-pool-size=10
+```
+
 ## Additional help
 ```
 $ gor listen -h
@@ -62,6 +90,7 @@ Usage of ./bin/gor-linux:
   -i="any": By default it try to listen on all network interfaces.To get list of interfaces run `ifconfig`
   -p=80: Specify the http server port whose traffic you want to capture
   -r="localhost:28020": Address of replay server.
+  -pool-size=0: Size of persistent connection pool (default: no pool)
 ```
 
 ```
@@ -72,6 +101,10 @@ Usage of ./bin/gor-linux:
 	If you have multiple addresses with different limits. For example: http://staging.example.com|100,http://dev.example.com|10
   -ip="0.0.0.0": ip addresses to listen on
   -p=28020: specify port number
+  -persistent-connections=false: Set this option to use together with connection pool in listen servers
+  -client-pool-size=0: size of a pool of connections to forward servers (default: no pool, open a connection per request).
+	Using a pool allows the usage of HTTP keep-alive when possible.
+
 ```
 
 ## Latest releases (including binaries)
