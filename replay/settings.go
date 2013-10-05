@@ -24,6 +24,8 @@ type ReplaySettings struct {
 	ForwardAddress string
 
 	Verbose bool
+
+	PersistentConnections bool
 }
 
 var Settings ReplaySettings = ReplaySettings{}
@@ -80,4 +82,6 @@ func init() {
 	flag.StringVar(&Settings.ForwardAddress, "f", defaultForwardAddress, "http address to forward traffic.\n\tYou can limit requests per second by adding `|num` after address.\n\tIf you have multiple addresses with different limits. For example: http://staging.example.com|100,http://dev.example.com|10")
 
 	flag.BoolVar(&Settings.Verbose, "verbose", false, "Log requests")
+
+	flag.BoolVar(&Settings.PersistentConnections, "persistent-connections", false, "Set this option to use together with connection pool in listen servers")
 }

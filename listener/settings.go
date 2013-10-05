@@ -12,6 +12,8 @@ const (
 	defaultAddress = "0.0.0.0"
 
 	defaultReplayAddress = "localhost:28020"
+
+	defaultPoolSize = 0
 )
 
 // ListenerSettings contain all the needed configuration for setting up the listener
@@ -24,6 +26,8 @@ type ListenerSettings struct {
 	ReplayLimit int
 
 	Verbose bool
+
+	PoolSize int
 }
 
 var Settings ListenerSettings = ListenerSettings{}
@@ -51,4 +55,6 @@ func init() {
 	Settings.ReplayServer(*replayAddress)
 
 	flag.BoolVar(&Settings.Verbose, "verbose", false, "Log requests")
+
+	flag.IntVar(&Settings.PoolSize, "pool-size", defaultPoolSize, "Size of persistent connection pool (default: no pool)")
 }

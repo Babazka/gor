@@ -31,6 +31,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"encoding/gob"
 )
 
 const bufSize = 4096
@@ -77,7 +78,11 @@ func Run() {
 			continue
 		}
 
-		go handleConnection(conn, requestFactory)
+		if Settings.PersistentConnections {
+			go handlePersistentConnection(conn, requestFactory)
+		} else {
+			go handleConnection(conn, requestFactory)
+		}
 	}
 
 }
@@ -116,6 +121,36 @@ func handleConnection(conn net.Conn, rf *RequestFactory) error {
 			rf.Add(request)
 		}
 	}()
+
+	return nil
+}
+
+func handlePersistentConnection(conn net.Conn, rf *RequestFactory) error {
+	defer conn.Close()
+
+	var buf []byte
+
+	decoder := gob.NewDecoder(conn)
+
+	for {
+		err := decoder.Decode(&buf)
+		if err == io.EOF {
+			return nil
+		} else if err != nil {
+			Debug("Gob decode error: %s", err)
+			return err
+		}
+
+		go func() {
+			if request, err := ParseRequest(buf); err != nil {
+				Debug("Error while parsing request", err, buf)
+			} else {
+				Debug("Adding request", buf)
+
+				rf.Add(request)
+			}
+		}()
+	}
 
 	return nil
 }

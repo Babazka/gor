@@ -49,6 +49,11 @@ func Run() {
 	// Sniffing traffic from given address
 	listener := RAWTCPListen(Settings.Address, Settings.Port)
 
+	var connection_pool *ConnectionPool
+	if Settings.PoolSize > 0 {
+		connection_pool = NewConnectionPool(Settings.PoolSize)
+	}
+
 	currentTime := time.Now().UnixNano()
 	currentRPS := 0
 
@@ -69,7 +74,18 @@ func Run() {
 			currentRPS++
 		}
 
-		go sendMessage(m)
+		if connection_pool == nil {
+			go sendMessage(m)
+		} else {
+			go sendMessageViaConnectionPool(m, connection_pool)
+		}
+	}
+}
+
+func sendMessageViaConnectionPool(m *TCPMessage, pool *ConnectionPool) {
+	err := pool.SendUsingSomeConnection(m.Bytes())
+	if err != nil {
+		Debug("Error while sending requests", err)
 	}
 }
 
