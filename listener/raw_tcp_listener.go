@@ -1,7 +1,6 @@
 package listener
 
 import (
-	"encoding/binary"
 	"log"
 	pcap "github.com/akrennmair/gopcap"
 )
@@ -19,14 +18,16 @@ type RAWTCPListener struct {
 	c_packets  chan *pcap.Packet
 	c_messages chan *TCPMessage // Messages ready to be send to client
 
+	sniffer *pcap.Pcap
+
 	c_del_message chan *TCPMessage // Used for notifications about completed or expired messages
 
-	addr string // IP to listen
+	device string // device to listen
 	port int    // Port to listen
 }
 
 // RAWTCPListen creates a listener to capture traffic from RAW_SOCKET
-func RAWTCPListen(addr string, port int) (listener *RAWTCPListener) {
+func RAWTCPListen(device string, port int) (listener *RAWTCPListener) {
 	listener = &RAWTCPListener{}
 
 	listener.c_packets = make(chan *pcap.Packet, 100)
@@ -34,8 +35,10 @@ func RAWTCPListen(addr string, port int) (listener *RAWTCPListener) {
 	listener.c_del_message = make(chan *TCPMessage, 100)
 	listener.messages = make(map[uint32]*TCPMessage)
 
-	listener.addr = addr
+	listener.device = device
 	listener.port = port
+
+	listener.startSniffer()
 
 	go listener.listen()
 	go listener.readRAWSocket()
@@ -58,17 +61,40 @@ func (t *RAWTCPListener) listen() {
 	}
 }
 
-func (t *RAWTCPListener) readRAWSocket() {
-	h, err := pcap.Openlive("lo", int32(65535), true, 0)
+func (t *RAWTCPListener) startSniffer() {
+	devices, err := pcap.Findalldevs()
+
+	if err != nil {
+		log.Fatal("Error while getting device list", err)
+	}
+
+	networkInterface := ""
+
+	for _, device := range devices {
+		if device.Name == Settings.Device {
+			networkInterface = device.Name
+			break
+		}
+	}
+
+	if networkInterface == "" {
+		log.Fatal("Could not find network interface", Settings.Device)
+	}
+
+	h, err := pcap.Openlive(networkInterface, int32(4026), true, 0)
 	h.Setfilter("tcp dst port " + string(t.port))
 
 	if err != nil {
 		log.Fatal("Error while trying to listen", err)
 	}
 
+	t.sniffer = h
+}
+
+func (t *RAWTCPListener) readRAWSocket() {
 	for {
 		// Note: ReadFrom receive messages without IP header
-		pkt := h.Next()
+		pkt := t.sniffer.Next()
 
 		if pkt == nil {
 			continue
@@ -85,32 +111,10 @@ func (t *RAWTCPListener) readRAWSocket() {
 			header := pkt.Headers[1].(*pcap.Tcphdr)
 			port := int(header.DestPort)
 			if port == t.port && (header.Flags & pcap.TCP_PSH) != 0 {
-				log.Println("Received packet", port, string(pkt.Payload))
 				t.c_packets <- pkt
 			}
 		}
 	}
-}
-
-func (t *RAWTCPListener) isIncomingDataPacket(buf []byte) bool {
-	// To avoid full packet parsing every time, we manually parsing values needed for packet filtering
-	// http://en.wikipedia.org/wiki/Transmission_Control_Protocol
-	dest_port := binary.BigEndian.Uint16(buf[2:4])
-
-	// Because RAW_SOCKET can't be bound to port, we have to control it by ourself
-	if int(dest_port) == t.port {
-		// Check TCPPacket code for more description
-		flags := binary.BigEndian.Uint16(buf[12:14]) & 0x1FF
-
-		// We need only packets with data inside
-		// TCP PSH flag indicate that packet have data inside
-		if (flags & TCP_PSH) != 0 {
-			// We should create new buffer because go slices is pointers. So buffer data shoud be immutable.
-			return true
-		}
-	}
-
-	return false
 }
 
 // Trying to add packet to existing message or creating new message

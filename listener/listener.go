@@ -43,11 +43,11 @@ func Run() {
 		os.Exit(1)
 	}
 
-	fmt.Println("Listening for HTTP traffic on", Settings.Address+":"+strconv.Itoa(Settings.Port))
+	fmt.Println("Listening for HTTP traffic on", Settings.Device+":"+strconv.Itoa(Settings.Port))
 	fmt.Println("Forwarding requests to replay server:", Settings.ReplayAddress, "Limit:", Settings.ReplayLimit)
 
-	// Sniffing traffic from given address
-	listener := RAWTCPListen(Settings.Address, Settings.Port)
+	// Sniffing traffic from given device
+	listener := RAWTCPListen(Settings.Device, Settings.Port)
 
 	var connection_pool *ConnectionPool
 	if Settings.PoolSize > 0 {

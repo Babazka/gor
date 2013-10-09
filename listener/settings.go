@@ -14,6 +14,8 @@ const (
 	defaultReplayAddress = "localhost:28020"
 
 	defaultPoolSize = 0
+
+	defaultDevice = "lo"
 )
 
 // ListenerSettings contain all the needed configuration for setting up the listener
@@ -28,6 +30,8 @@ type ListenerSettings struct {
 	Verbose bool
 
 	PoolSize int
+
+	Device string
 }
 
 var Settings ListenerSettings = ListenerSettings{}
@@ -49,7 +53,9 @@ func init() {
 	}
 
 	flag.IntVar(&Settings.Port, "p", defaultPort, "Specify the http server port whose traffic you want to capture")
-	flag.StringVar(&Settings.Address, "ip", defaultAddress, "Specify IP address to listen")
+	/*flag.StringVar(&Settings.Address, "ip", defaultAddress, "Specify IP address to listen")*/
+
+	flag.StringVar(&Settings.Device, "i", defaultDevice, "Specify network interface to listen to")
 
 	replayAddress := flag.String("r", defaultReplayAddress, "Address of replay server.")
 	Settings.ReplayServer(*replayAddress)
