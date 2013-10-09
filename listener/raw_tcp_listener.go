@@ -133,7 +133,9 @@ func (t *RAWTCPListener) processTCPPacket(packet *pcap.Packet) {
 	}
 
 	// Adding packet to message
-	message.c_packets <- packet
+	if message.c_packets != nil {
+		message.c_packets <- packet
+	}
 }
 
 // Receive TCP messages from the listener channel
