@@ -100,6 +100,9 @@ func (t *RAWTCPListener) readRAWSocket() {
 			continue
 		}
 
+		if pkt.Len < 34 {
+			continue
+		}
 		pkt.Decode()
 
 		if len(pkt.Headers) < 2 {
