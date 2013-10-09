@@ -81,6 +81,7 @@ func Run() {
 		if Settings.ReplayLimit != 0 {
 			if (time.Now().UnixNano() - currentTime) > time.Second.Nanoseconds() {
 				currentTime = time.Now().UnixNano()
+				log.Printf("Output RPS: %d", currentRPS)
 				currentRPS = 0
 			}
 
