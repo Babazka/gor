@@ -1,6 +1,7 @@
 package listener
 
 import (
+	"github.com/akrennmair/gopcap"
 	"sort"
 	"time"
 )
@@ -15,11 +16,11 @@ const MSG_EXPIRE = 200 * time.Millisecond
 // Message is received if we didn't receive any packets for 200ms
 type TCPMessage struct {
 	Ack     uint32 // Message ID
-	packets []*TCPPacket
+	packets []*pcap.Packet
 
 	timer *time.Timer // Used for expire check
 
-	c_packets chan *TCPPacket
+	c_packets chan *pcap.Packet
 
 	c_del_message chan *TCPMessage
 }
@@ -28,7 +29,7 @@ type TCPMessage struct {
 func NewTCPMessage(Ack uint32, c_del chan *TCPMessage) (msg *TCPMessage) {
 	msg = &TCPMessage{Ack: Ack}
 
-	msg.c_packets = make(chan *TCPPacket)
+	msg.c_packets = make(chan *pcap.Packet)
 	msg.c_del_message = c_del // used for notifying that message completed or expired
 
 	// Every time we receive packet we reset this timer
@@ -72,7 +73,7 @@ func (t *TCPMessage) Bytes() (output []byte) {
 	sort.Ints(mk)
 
 	for _, k := range mk {
-		output = append(output, t.packets[k].Data...)
+		output = append(output, t.packets[k].Payload...)
 	}
 
 	return
@@ -80,11 +81,13 @@ func (t *TCPMessage) Bytes() (output []byte) {
 
 // AddPacket to the message and ensure packet uniqueness
 // TCP allows that packet can be re-send multiple times
-func (t *TCPMessage) AddPacket(packet *TCPPacket) {
+func (t *TCPMessage) AddPacket(packet *pcap.Packet) {
 	packetFound := false
+	seq := int(packet.Headers[1].(*pcap.Tcphdr).Seq)
 
 	for _, pkt := range t.packets {
-		if packet.Seq == pkt.Seq {
+		pkt_seq := int(pkt.Headers[1].(*pcap.Tcphdr).Seq)
+		if seq == pkt_seq {
 			packetFound = true
 			break
 		}

@@ -3,7 +3,7 @@ package listener
 import (
 	"encoding/binary"
 	"log"
-	"net"
+	pcap "github.com/akrennmair/gopcap"
 )
 
 // Capture traffic from socket using RAW_SOCKET's
@@ -16,7 +16,7 @@ import (
 type RAWTCPListener struct {
 	messages map[uint32]*TCPMessage // buffer of TCPMessages waiting to be send
 
-	c_packets  chan *TCPPacket
+	c_packets  chan *pcap.Packet
 	c_messages chan *TCPMessage // Messages ready to be send to client
 
 	c_del_message chan *TCPMessage // Used for notifications about completed or expired messages
@@ -29,7 +29,7 @@ type RAWTCPListener struct {
 func RAWTCPListen(addr string, port int) (listener *RAWTCPListener) {
 	listener = &RAWTCPListener{}
 
-	listener.c_packets = make(chan *TCPPacket, 100)
+	listener.c_packets = make(chan *pcap.Packet, 100)
 	listener.c_messages = make(chan *TCPMessage, 100)
 	listener.c_del_message = make(chan *TCPMessage, 100)
 	listener.messages = make(map[uint32]*TCPMessage)
@@ -59,36 +59,36 @@ func (t *RAWTCPListener) listen() {
 }
 
 func (t *RAWTCPListener) readRAWSocket() {
-	conn, e := net.ListenPacket("ip4:tcp", t.addr)
-	defer conn.Close()
+	h, err := pcap.Openlive("lo", int32(65535), true, 0)
+	h.Setfilter("tcp dst port " + string(t.port))
 
-	if e != nil {
-		log.Fatal(e)
+	if err != nil {
+		log.Fatal("Error while trying to listen", err)
 	}
-
-	buf := make([]byte, 4096*2)
 
 	for {
 		// Note: ReadFrom receive messages without IP header
-		n, _, err := conn.ReadFrom(buf)
+		pkt := h.Next()
 
-		if err != nil {
-			Debug("Error:", err)
+		if pkt == nil {
 			continue
 		}
 
-		if n > 0 {
-			t.parsePacket(buf[:n])
+		pkt.Decode()
+
+		if len(pkt.Headers) < 2 {
+			continue
 		}
-	}
-}
 
-func (t *RAWTCPListener) parsePacket(buf []byte) {
-	if t.isIncomingDataPacket(buf) {
-		new_buf := make([]byte, len(buf))
-		copy(new_buf, buf)
-
-		t.c_packets <- ParseTCPPacket(new_buf)
+		switch pkt.Headers[1].(type) {
+		case *pcap.Tcphdr:
+			header := pkt.Headers[1].(*pcap.Tcphdr)
+			port := int(header.DestPort)
+			if port == t.port && (header.Flags & pcap.TCP_PSH) != 0 {
+				log.Println("Received packet", port, string(pkt.Payload))
+				t.c_packets <- pkt
+			}
+		}
 	}
 }
 
@@ -116,15 +116,16 @@ func (t *RAWTCPListener) isIncomingDataPacket(buf []byte) bool {
 // Trying to add packet to existing message or creating new message
 //
 // For TCP message unique id is Acknowledgment number (see tcp_packet.go)
-func (t *RAWTCPListener) processTCPPacket(packet *TCPPacket) {
+func (t *RAWTCPListener) processTCPPacket(packet *pcap.Packet) {
 	var message *TCPMessage
+	ack := packet.Headers[1].(*pcap.Tcphdr).Ack
 
-	message, ok := t.messages[packet.Ack]
+	message, ok := t.messages[ack]
 
 	if !ok {
 		// We sending c_del_message channel, so message object can communicate with Listener and notify it if message completed
-		message = NewTCPMessage(packet.Ack, t.c_del_message)
-		t.messages[packet.Ack] = message
+		message = NewTCPMessage(ack, t.c_del_message)
+		t.messages[ack] = message
 	}
 
 	// Adding packet to message
