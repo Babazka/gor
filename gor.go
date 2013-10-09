@@ -13,8 +13,8 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"github.com/buger/gor/listener"
-	"github.com/buger/gor/replay"
+	"github.com/Babazka/gor/listener"
+	"github.com/Babazka/gor/replay"
 )
 
 const (
