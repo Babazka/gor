@@ -36,6 +36,20 @@ func ReplayServer() (conn net.Conn, err error) {
 	return
 }
 
+// ReplayServer returns a connection to the replay server and error if some
+func ReplayServerWithNumber(index int) (conn net.Conn, err error) {
+	// Connection to replay server
+	//conn, err = net.Dial("tcp", Settings.ReplayAddress)
+	address := fmt.Sprintf("%s.%d", Settings.ReplayAddress, index)
+	conn, err = net.Dial("unix", address)
+
+	if err != nil {
+		log.Println("Connection error ", err, Settings.ReplayAddress)
+	}
+
+	return
+}
+
 // Run acts as `main` function of a listener
 func Run() {
 	if os.Getuid() != 0 {

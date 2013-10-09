@@ -57,7 +57,8 @@ func (self *ConnectionPool) EstablishConnection(index int) (net.Conn, error) {
 		self.connections[index].Close()
 		self.connections[index] = nil
 	}
-	conn, err := ReplayServer()
+	/*conn, err := ReplayServer()*/
+	conn, err := ReplayServerWithNumber(index)
 	Debug("Dialing replay server; pool connection #", index)
 	if err != nil {
 		return nil, err
