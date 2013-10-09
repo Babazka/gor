@@ -14,6 +14,7 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"github.com/Babazka/gor/replay"
 )
 
 // Debug enables logging only if "--verbose" flag passed
@@ -46,7 +47,19 @@ func Run() {
 	Settings.ReplayServer(Settings.ReplayAddressRaw)
 
 	fmt.Println("Listening for HTTP traffic on", Settings.Device+":"+strconv.Itoa(Settings.Port))
-	fmt.Println("Forwarding requests to replay server:", Settings.ReplayAddress, "Limit:", Settings.ReplayLimit)
+
+	var requestFactory *replay.RequestFactory = nil
+
+	if replay.Settings.ForwardAddress != "" {
+		replay.Settings.Verbose = Settings.Verbose
+		for _, host := range replay.Settings.ForwardedHosts() {
+			log.Println("Forwarding requests to:", host.Url, "limit:", host.Limit)
+		}
+
+		requestFactory = replay.NewRequestFactory()
+	} else {
+		fmt.Println("Forwarding requests to replay server:", Settings.ReplayAddress, "Limit:", Settings.ReplayLimit)
+	}
 
 	// Sniffing traffic from given device
 	listener := RAWTCPListen(Settings.Device, Settings.Port)
@@ -76,13 +89,27 @@ func Run() {
 			currentRPS++
 		}
 
-		if connection_pool == nil {
+		if requestFactory != nil {
+			go sendMessageViaRequestFactory(m, requestFactory)
+		} else if connection_pool == nil {
 			go sendMessage(m)
 		} else {
 			go sendMessageViaConnectionPool(m, connection_pool)
 		}
 	}
 }
+
+func sendMessageViaRequestFactory(m *TCPMessage, rf *replay.RequestFactory) {
+	buf := m.Bytes()
+
+	if request, err := replay.ParseRequest(buf); err != nil {
+		Debug("Error while parsing request", err, buf)
+	} else {
+		Debug("Adding request", request)
+		rf.Add(request)
+	}
+}
+
 
 func sendMessageViaConnectionPool(m *TCPMessage, pool *ConnectionPool) {
 	err := pool.SendUsingSomeConnection(m.Bytes())
