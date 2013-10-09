@@ -2,6 +2,7 @@ package replay
 
 import (
 	"flag"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -23,6 +24,7 @@ type ReplaySettings struct {
 	Host string
 
 	Address        string
+	Unix        string
 	ForwardAddress string
 
 	Verbose bool
@@ -68,7 +70,9 @@ func (r *ReplaySettings) ForwardedHosts() (hosts []*ForwardHost) {
 // SetAddress with port, e.g.: 127.0.0.1:28020
 func (r *ReplaySettings) SetAddress() {
 	r.Address = r.Host + ":" + strconv.Itoa(r.Port)
-	r.Address = r.Host
+	r.Address = r.Unix
+	log.Printf("address: %s", r.Address)
+
 }
 
 func init() {
@@ -87,9 +91,8 @@ func init() {
 
 	flag.IntVar(&Settings.Port, "p", defaultPort, "specify port number")
 
-	flag.StringVar(&Settings.Host, "ip", defaultHost, "ip addresses to listen on")
+	flag.StringVar(&Settings.Address, "ip", defaultHost, "ip addresses to listen on")
 
-	Settings.SetAddress()
 	flag.StringVar(&Settings.ForwardAddress, "f", defaultForwardAddress, "http address to forward traffic.\n\tYou can limit requests per second by adding `|num` after address.\n\tIf you have multiple addresses with different limits. For example: http://staging.example.com|100,http://dev.example.com|10")
 
 	flag.BoolVar(&Settings.Verbose, "verbose", false, "Log requests")
