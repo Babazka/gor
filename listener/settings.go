@@ -27,6 +27,7 @@ type ListenerSettings struct {
 	ReplayAddressRaw string
 
 	ReplayLimit int
+	PacketLimit int
 
 	Verbose bool
 
@@ -66,4 +67,6 @@ func init() {
 	flag.BoolVar(&Settings.Verbose, "verbose", false, "Log requests")
 
 	flag.IntVar(&Settings.PoolSize, "pool-size", defaultPoolSize, "Size of persistent connection pool (default: no pool)")
+
+	flag.IntVar(&Settings.PacketLimit, "packet-limit", 0, "Limiting parsed network packets per second")
 }

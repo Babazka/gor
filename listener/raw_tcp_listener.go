@@ -52,7 +52,8 @@ func (t *RAWTCPListener) listen() {
 	for {
 		select {
 		case <-tick:
-			t.messages = make(map[uint32]*TCPMessage)
+			/*t.messages = make(map[uint32]*TCPMessage)*/
+			log.Printf("tick")
 		// If message ready for deletion it means that its also complete or expired by timeout
 		case message := <-t.c_del_message:
 			t.c_messages <- message
@@ -107,10 +108,12 @@ func my_decode(pkt *pcap.Packet, good *bool) {
 }
 
 func (t *RAWTCPListener) readRAWSocket() {
+	currentTime := time.Now().UnixNano()
+	currentRPS := 0
+
 	for {
 		// Note: ReadFrom receive messages without IP header
 		pkt := t.sniffer.Next()
-		good := true
 
 		if pkt == nil {
 			continue
@@ -119,6 +122,22 @@ func (t *RAWTCPListener) readRAWSocket() {
 		if pkt.Len < 34 {
 			continue
 		}
+
+		if Settings.PacketLimit != 0 {
+			if (time.Now().UnixNano() - currentTime) > time.Second.Nanoseconds() {
+				currentTime = time.Now().UnixNano()
+				log.Printf("RPS: %d", currentRPS)
+				currentRPS = 0
+			}
+
+			if currentRPS >= Settings.PacketLimit {
+				continue
+			}
+
+			currentRPS++
+		}
+
+		good := true
 		/*pkt.Decode()*/
 		my_decode(pkt, &good)
 		if !good {
