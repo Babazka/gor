@@ -68,6 +68,7 @@ func (r *ReplaySettings) ForwardedHosts() (hosts []*ForwardHost) {
 // SetAddress with port, e.g.: 127.0.0.1:28020
 func (r *ReplaySettings) SetAddress() {
 	r.Address = r.Host + ":" + strconv.Itoa(r.Port)
+	r.Address = "/tmp/mysocket"
 }
 
 func init() {

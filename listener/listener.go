@@ -26,7 +26,8 @@ func Debug(v ...interface{}) {
 // ReplayServer returns a connection to the replay server and error if some
 func ReplayServer() (conn net.Conn, err error) {
 	// Connection to replay server
-	conn, err = net.Dial("tcp", Settings.ReplayAddress)
+	//conn, err = net.Dial("tcp", Settings.ReplayAddress)
+	conn, err = net.Dial("unix", Settings.ReplayAddress)
 
 	if err != nil {
 		log.Println("Connection error ", err, Settings.ReplayAddress)

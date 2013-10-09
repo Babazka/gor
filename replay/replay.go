@@ -56,7 +56,8 @@ func ParseRequest(data []byte) (request *http.Request, err error) {
 // Replay server listen to UDP traffic from Listeners
 // Each request processed by RequestFactory
 func Run() {
-	listener, err := net.Listen("tcp", Settings.Address)
+	/*listener, err := net.Listen("tcp", Settings.Address)*/
+	listener, err := net.Listen("unix", Settings.Address)
 
 	log.Println("Starting replay server at:", Settings.Address)
 
