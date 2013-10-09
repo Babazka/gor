@@ -91,10 +91,22 @@ func (t *RAWTCPListener) startSniffer() {
 	t.sniffer = h
 }
 
+func my_decode(pkt *pcap.Packet, good *bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("recovered from", r)
+			(*good) = false
+		}
+	}()
+	pkt.Decode()
+	(*good) = true
+}
+
 func (t *RAWTCPListener) readRAWSocket() {
 	for {
 		// Note: ReadFrom receive messages without IP header
 		pkt := t.sniffer.Next()
+		good := true
 
 		if pkt == nil {
 			continue
@@ -103,7 +115,11 @@ func (t *RAWTCPListener) readRAWSocket() {
 		if pkt.Len < 34 {
 			continue
 		}
-		pkt.Decode()
+		/*pkt.Decode()*/
+		my_decode(pkt, &good)
+		if !good {
+			continue
+		}
 
 		if len(pkt.Headers) < 2 {
 			continue
