@@ -2,6 +2,7 @@ package listener
 
 import (
 	"log"
+	"time"
 	pcap "github.com/akrennmair/gopcap"
 )
 
@@ -47,8 +48,11 @@ func RAWTCPListen(device string, port int) (listener *RAWTCPListener) {
 }
 
 func (t *RAWTCPListener) listen() {
+	tick := time.Tick(10 * time.Second)
 	for {
 		select {
+		case <-tick:
+			t.messages = make(map[uint32]*TCPMessage)
 		// If message ready for deletion it means that its also complete or expired by timeout
 		case message := <-t.c_del_message:
 			t.c_messages <- message
