@@ -26,6 +26,7 @@ package replay
 
 import (
 	"bufio"
+	"time"
 	"bytes"
 	"io"
 	"log"
@@ -133,6 +134,10 @@ func handlePersistentConnection(conn net.Conn, rf *RequestFactory) error {
 
 	decoder := gob.NewDecoder(conn)
 
+	currentTime := time.Now().UnixNano()
+	currentRPS := 0
+
+
 	for {
 		err := decoder.Decode(&buf)
 		if err == io.EOF {
@@ -141,6 +146,13 @@ func handlePersistentConnection(conn net.Conn, rf *RequestFactory) error {
 			Debug("Gob decode error: %s", err)
 			return err
 		}
+
+        if (time.Now().UnixNano() - currentTime) > time.Second.Nanoseconds() {
+            currentTime = time.Now().UnixNano()
+            log.Printf("Input RPS: %d", currentRPS)
+            currentRPS = 0
+        }
+        currentRPS += 1
 
 		go func() {
 			if request, err := ParseRequest(buf); err != nil {

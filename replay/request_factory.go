@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"io/ioutil"
 	"sync"
+	"time"
+	"log"
 )
 
 // HttpResponse contains a host, a http request,
@@ -35,7 +37,7 @@ type RequestFactory struct {
 func NewRequestFactory() (factory *RequestFactory) {
 	factory = &RequestFactory{}
 	factory.c_responses = make(chan *HttpResponse, 1)
-	factory.c_requests = make(chan *http.Request, 1)
+	factory.c_requests = make(chan *http.Request, 100)
 
 	go factory.handleRequests()
 
@@ -94,16 +96,24 @@ func (f *RequestFactory) sendRequest(host *ForwardHost, request *http.Request) {
 		Debug("Request error:", err)
 	}
 
-	f.c_responses <- &HttpResponse{host, request, resp, err}
+	//f.c_responses <- &HttpResponse{host, request, resp, err}
 }
 
 // handleRequests and their responses
 func (f *RequestFactory) handleRequests() {
 	hosts := Settings.ForwardedHosts()
 
+	tick := time.Tick(10 * time.Second)
+
+    rps := 0
+
 	for {
 		select {
+		case <-tick:
+            log.Printf("RF average RPS: %d", rps / 10)
+            rps = 0
 		case req := <-f.c_requests:
+            rps += 1
 			for _, host := range hosts {
 				// Ensure that we have actual stats for given timestamp
 				host.Stat.Touch()

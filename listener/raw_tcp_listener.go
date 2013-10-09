@@ -6,6 +6,10 @@ import (
 	pcap "github.com/akrennmair/gopcap"
 )
 
+const (
+    MSG_QUEUE_SIZE = 5000
+)
+
 // Capture traffic from socket using RAW_SOCKET's
 // http://en.wikipedia.org/wiki/Raw_socket
 //
@@ -32,7 +36,7 @@ func RAWTCPListen(device string, port int) (listener *RAWTCPListener) {
 	listener = &RAWTCPListener{}
 
 	listener.c_packets = make(chan *pcap.Packet, 100)
-	listener.c_messages = make(chan *TCPMessage, 100)
+	listener.c_messages = make(chan *TCPMessage, MSG_QUEUE_SIZE)
 	listener.c_del_message = make(chan *TCPMessage, 100)
 	listener.messages = make(map[uint32]*TCPMessage)
 
@@ -88,6 +92,9 @@ func (t *RAWTCPListener) startSniffer() {
 
 	h, err := pcap.Openlive(networkInterface, int32(4026), true, 0)
 	h.Setfilter("tcp dst port " + string(t.port))
+    if Settings.NoReassembly {
+        h.Setfilter("tcp[tcpflags] & tcp-push != 0")
+    }
 
 	if err != nil {
 		log.Fatal("Error while trying to listen", err)
@@ -202,4 +209,8 @@ func (t *RAWTCPListener) processTCPPacket(packet *pcap.Packet) {
 // Receive TCP messages from the listener channel
 func (t *RAWTCPListener) Receive() *TCPMessage {
 	return <-t.c_messages
+}
+
+func (t *RAWTCPListener) UnreadCount() int {
+	return len(t.c_messages)
 }

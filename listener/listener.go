@@ -81,7 +81,7 @@ func Run() {
 		if Settings.ReplayLimit != 0 {
 			if (time.Now().UnixNano() - currentTime) > time.Second.Nanoseconds() {
 				currentTime = time.Now().UnixNano()
-				log.Printf("Output RPS: %d", currentRPS)
+				log.Printf("Output RPS: %d, unread %d", currentRPS, listener.UnreadCount())
 				currentRPS = 0
 			}
 
@@ -95,7 +95,8 @@ func Run() {
 		if connection_pool == nil {
 			go sendMessage(m)
 		} else {
-			go sendMessageViaConnectionPool(m, connection_pool)
+			//go sendMessageViaConnectionPool(m, connection_pool)
+			sendMessageViaConnectionPool(m, connection_pool)
 		}
 	}
 }
