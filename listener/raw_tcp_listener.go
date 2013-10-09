@@ -153,9 +153,28 @@ func (t *RAWTCPListener) readRAWSocket() {
 			header := pkt.Headers[1].(*pcap.Tcphdr)
 			port := int(header.DestPort)
 			if port == t.port && (header.Flags & pcap.TCP_PSH) != 0 {
-				t.c_packets <- pkt
+				if Settings.NoReassembly {
+					t.NoReassemblyAnalysis(pkt)
+				} else {
+					t.c_packets <- pkt
+				}
 			}
 		}
+	}
+}
+
+
+func (t *RAWTCPListener) NoReassemblyAnalysis(packet *pcap.Packet) {
+	payload := packet.Payload
+	// "GET / HTTP/1.0" -- 14 bytes
+	if len(payload) < 14 {
+		return
+	}
+	possible_method := string(payload[:4])
+	if possible_method == "GET " || possible_method == "POST" {
+		message := &TCPMessage{Ack: 0}
+		message.packets = append(message.packets, packet)
+		t.c_messages <- message
 	}
 }
 
