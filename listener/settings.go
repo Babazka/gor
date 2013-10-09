@@ -24,6 +24,7 @@ type ListenerSettings struct {
 	Address string
 
 	ReplayAddress string
+	ReplayAddressRaw string
 
 	ReplayLimit int
 
@@ -57,8 +58,10 @@ func init() {
 
 	flag.StringVar(&Settings.Device, "i", defaultDevice, "Specify network interface to listen to")
 
-	replayAddress := flag.String("r", defaultReplayAddress, "Address of replay server.")
-	Settings.ReplayServer(*replayAddress)
+	//replayAddress := flag.String("r", defaultReplayAddress, "Address of replay server.")
+	//Settings.ReplayServer(*replayAddress)
+
+	flag.StringVar(&Settings.ReplayAddressRaw, "r", defaultReplayAddress, "Address of replay server.")
 
 	flag.BoolVar(&Settings.Verbose, "verbose", false, "Log requests")
 

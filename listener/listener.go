@@ -43,6 +43,8 @@ func Run() {
 		os.Exit(1)
 	}
 
+	Settings.ReplayServer(Settings.ReplayAddressRaw)
+
 	fmt.Println("Listening for HTTP traffic on", Settings.Device+":"+strconv.Itoa(Settings.Port))
 	fmt.Println("Forwarding requests to replay server:", Settings.ReplayAddress, "Limit:", Settings.ReplayLimit)
 
