@@ -30,6 +30,7 @@ type HttpResponse struct {
 type RequestFactory struct {
 	c_responses chan *HttpResponse
 	c_requests  chan *http.Request
+	hosts []*ForwardHost
 }
 
 // NewRequestFactory returns a RequestFactory pointer
@@ -39,7 +40,9 @@ func NewRequestFactory() (factory *RequestFactory) {
 	factory.c_responses = make(chan *HttpResponse, 1)
 	factory.c_requests = make(chan *http.Request, 100)
 
-	go factory.handleRequests()
+	factory.hosts = Settings.ForwardedHosts()
+
+	/*go factory.handleRequests()*/
 
 	return
 }
@@ -133,6 +136,16 @@ func (f *RequestFactory) handleRequests() {
 }
 
 // Add request to channel for further processing
+/*
 func (f *RequestFactory) Add(request *http.Request) {
 	f.c_requests <- request
+}
+*/
+
+func (f *RequestFactory) Add(request *http.Request) {
+	if len(f.hosts) < 1 {
+		return
+	}
+	host := f.hosts[0]
+	go f.sendRequest(host, request)
 }
