@@ -29,6 +29,8 @@ type ReplaySettings struct {
 
 	DumbForwardAddress string
 
+	ThisSideAddress string
+
 	Verbose bool
 
 	DumbTcpPool bool
@@ -100,6 +102,8 @@ func init() {
 	flag.StringVar(&Settings.ForwardAddress, "f", defaultForwardAddress, "http address to forward traffic.\n\tYou can limit requests per second by adding `|num` after address.\n\tIf you have multiple addresses with different limits. For example: http://staging.example.com|100,http://dev.example.com|10")
 
 	flag.StringVar(&Settings.DumbForwardAddress, "dumb-f", "192.168.140.46:80", "destination for dumb tcp pool")
+
+	flag.StringVar(&Settings.ThisSideAddress, "local-addr", "1.2.3.4", "local address")
 
 	flag.BoolVar(&Settings.DumbTcpPool, "dumb-pool", false, "Use dumb tcp pool")
 
