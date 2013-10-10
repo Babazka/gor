@@ -53,9 +53,11 @@ func (r *ReplaySettings) ForwardedHosts() (hosts []*ForwardHost) {
 		host := &ForwardHost{Url: host_info[0]}
 		host.Stat = NewRequestStats(host)
 
+		/*
 		if r.ClientPoolSize > 0 {
 			host.Clients = NewClientPool(r.ClientPoolSize)
 		}
+		*/
 
 		if len(host_info) > 1 {
 			host.Limit, _ = strconv.Atoi(host_info[1])

@@ -5,9 +5,12 @@ import (
 	"net/http"
 	"net/url"
 	"io/ioutil"
-	"sync"
 	"time"
 	"log"
+)
+
+const (
+	WORKER_CHAN_SIZE = 4000
 )
 
 // HttpResponse contains a host, a http request,
@@ -28,20 +31,92 @@ type HttpResponse struct {
 // 3. sendRequest() forwards request and returns response info to `responses` chan
 // 4. handleRequest() listen for `response` channel and updates stats
 type RequestFactory struct {
-	c_responses chan *HttpResponse
-	c_requests  chan *http.Request
+	requests chan *http.Request
 }
 
 // NewRequestFactory returns a RequestFactory pointer
 // One created, it starts listening for incoming requests: requests channel
 func NewRequestFactory() (factory *RequestFactory) {
 	factory = &RequestFactory{}
-	factory.c_responses = make(chan *HttpResponse, 1)
-	factory.c_requests = make(chan *http.Request, 100)
+	/*factory.c_responses = make(chan *HttpResponse, 1)*/
+	/*factory.c_requests = make(chan *http.Request, 100)*/
+	n_workers := Settings.ClientPoolSize
+	if n_workers == 0 {
+		n_workers = 1
+	}
 
-	go factory.handleRequests()
+	factory.requests = make(chan *http.Request, WORKER_CHAN_SIZE)
+
+	for i := 0; i < n_workers; i++ {
+		go factory.Worker(i, factory.requests)
+	}
+
+	/*go factory.handleRequests()*/
 
 	return
+}
+
+// Add request to channel for further processing
+func (f *RequestFactory) Add(request *http.Request) {
+	f.requests <- request
+
+}
+
+func (f *RequestFactory) Worker(wnum int, requests chan *http.Request) {
+	hosts := Settings.ForwardedHosts()
+
+	client := &http.Client{
+		CheckRedirect: customCheckRedirect,
+	}
+
+	tick := time.Tick(10 * time.Second)
+
+    rps := 0
+
+	for {
+		select {
+		case <-tick:
+            log.Printf("W%d average RPS: %d, qlen %d", wnum, rps / 10, len(requests))
+            rps = 0
+		case request := <-requests:
+			rps += 1
+			// Change HOST of original request
+			if len(hosts) < 1 {
+				continue
+			}
+			host := hosts[0]
+			/*
+			// Ensure that we have actual stats for given timestamp
+			host.Stat.Touch()
+
+			if !(host.Limit == 0 || host.Stat.Count < host.Limit) {
+				continue
+			}
+
+			// Increment Stat.Count
+			host.Stat.IncReq()
+			*/
+			URL := host.Url + request.URL.Path + "?" + request.URL.RawQuery
+
+			request.RequestURI = ""
+			request.URL, _ = url.ParseRequestURI(URL)
+
+			Debug("Sending request:", host.Url, request)
+
+			resp, err := client.Do(request)
+
+			if err == nil {
+				if host.Clients != nil {
+					// we must read the response completely to make keep-alive work
+					// (partial reads don't seem to work, contrary to the documentation)
+					ioutil.ReadAll(resp.Body)
+				}
+				resp.Body.Close()
+			} else {
+				Debug("Request error:", err)
+			}
+		}
+	}
 }
 
 // customCheckRedirect disables redirects https://github.com/buger/gor/pull/15
@@ -52,6 +127,7 @@ func customCheckRedirect(req *http.Request, via []*http.Request) error {
 	return nil
 }
 
+/*
 // sendRequest forwards http request to a given host
 func (f *RequestFactory) sendRequest(host *ForwardHost, request *http.Request) {
 	var client *http.Client
@@ -98,8 +174,10 @@ func (f *RequestFactory) sendRequest(host *ForwardHost, request *http.Request) {
 
 	//f.c_responses <- &HttpResponse{host, request, resp, err}
 }
+*/
 
 // handleRequests and their responses
+/*
 func (f *RequestFactory) handleRequests() {
 	hosts := Settings.ForwardedHosts()
 
@@ -131,8 +209,5 @@ func (f *RequestFactory) handleRequests() {
 		}
 	}
 }
+*/
 
-// Add request to channel for further processing
-func (f *RequestFactory) Add(request *http.Request) {
-	f.c_requests <- request
-}
