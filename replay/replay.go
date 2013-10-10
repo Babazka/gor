@@ -154,15 +154,38 @@ func handlePersistentConnection(conn net.Conn, rf *RequestFactory) error {
         }
         currentRPS += 1
 
-		go func() {
-			if request, err := ParseRequest(buf); err != nil {
-				Debug("Error while parsing request", err, buf)
-			} else {
-				Debug("Adding request", request)
+		if Settings.DumbTcpPool {
+			go func() {
+				conn, err := rf.DumbPool.Connect(Settings.DumbForwardAddress)
+				defer rf.DumbPool.ReturnToPool(conn)
+				if err != nil {
+					Debug("Error while connectiing", err)
+				}
+				_, err = conn.Write(buf)
+				if err != nil {
+					Debug("Error while sending", err)
+				}
+				resp_buf := make([]byte, 100)
+				err = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+				if err != nil {
+					Debug("Error while setting read deadline", err)
+				}
+				_, err = conn.Read(resp_buf)
+				if err != nil {
+					Debug("Error while reading response", err)
+				}
+			}()
+		} else {
+			go func() {
+				if request, err := ParseRequest(buf); err != nil {
+					Debug("Error while parsing request", err, buf)
+				} else {
+					Debug("Adding request", request)
 
-				rf.Add(request)
-			}
-		}()
+					rf.Add(request)
+				}
+			}()
+		}
 	}
 
 	return nil

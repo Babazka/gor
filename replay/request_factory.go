@@ -30,6 +30,7 @@ type HttpResponse struct {
 type RequestFactory struct {
 	c_responses chan *HttpResponse
 	c_requests  chan *http.Request
+	DumbPool *TcpPool
 }
 
 // NewRequestFactory returns a RequestFactory pointer
@@ -39,7 +40,13 @@ func NewRequestFactory() (factory *RequestFactory) {
 	factory.c_responses = make(chan *HttpResponse, 1)
 	factory.c_requests = make(chan *http.Request, 100)
 
+	factory.DumbPool = nil
+	if Settings.DumbTcpPool {
+		factory.DumbPool = NewTcpPool(Settings.ClientPoolSize)
+	}
+
 	go factory.handleRequests()
+
 
 	return
 }

@@ -27,7 +27,11 @@ type ReplaySettings struct {
 	Unix        string
 	ForwardAddress string
 
+	DumbForwardAddress string
+
 	Verbose bool
+
+	DumbTcpPool bool
 
 	PersistentConnections bool
 
@@ -95,7 +99,12 @@ func init() {
 
 	flag.StringVar(&Settings.ForwardAddress, "f", defaultForwardAddress, "http address to forward traffic.\n\tYou can limit requests per second by adding `|num` after address.\n\tIf you have multiple addresses with different limits. For example: http://staging.example.com|100,http://dev.example.com|10")
 
+	flag.StringVar(&Settings.DumbForwardAddress, "dumb-f", "192.168.140.46:80", "destination for dumb tcp pool")
+
+	flag.BoolVar(&Settings.DumbTcpPool, "dumb-pool", false, "Use dumb tcp pool")
+
 	flag.BoolVar(&Settings.Verbose, "verbose", false, "Log requests")
+
 
 	flag.BoolVar(&Settings.PersistentConnections, "persistent-connections", false, "Set this option to use together with connection pool in listen servers")
 
