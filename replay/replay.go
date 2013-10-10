@@ -160,6 +160,7 @@ func handlePersistentConnection(conn net.Conn, rf *RequestFactory) error {
 				defer rf.DumbPool.ReturnToPool(conn)
 				if err != nil {
 					Debug("Error while connectiing", err)
+					return
 				}
 				_, err = conn.Write(buf)
 				if err != nil {
