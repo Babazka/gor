@@ -61,6 +61,9 @@ func (t *RAWTCPListener) listen() {
 		// If message ready for deletion it means that its also complete or expired by timeout
 		case message := <-t.c_del_message:
 			t.c_messages <- message
+			if Settings.Twice {
+				t.c_messages <- message
+			}
 			delete(t.messages, message.Ack)
 
 		// We need to use channels to process each packet to avoid data races

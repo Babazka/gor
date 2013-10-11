@@ -30,6 +30,7 @@ type ListenerSettings struct {
 	PacketLimit int
 
 	Verbose bool
+	Twice bool
 	NoReassembly bool
 
 	PoolSize int
@@ -66,6 +67,8 @@ func init() {
 	flag.StringVar(&Settings.ReplayAddressRaw, "r", defaultReplayAddress, "Address of replay server.")
 
 	flag.BoolVar(&Settings.Verbose, "verbose", false, "Log requests")
+
+	flag.BoolVar(&Settings.Twice, "twice", false, "duplicate every http request")
 
 	flag.BoolVar(&Settings.NoReassembly, "no-reasm", false, "Do not reassemble TCP streams, catch only segments with payload starting with GET / POST")
 
