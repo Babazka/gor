@@ -28,11 +28,10 @@ type RAWTCPListener struct {
 	c_del_message chan *TCPMessage // Used for notifications about completed or expired messages
 
 	device string // device to listen
-	port int    // Port to listen
 }
 
 // RAWTCPListen creates a listener to capture traffic from RAW_SOCKET
-func RAWTCPListen(device string, port int) (listener *RAWTCPListener) {
+func RAWTCPListen(device string) (listener *RAWTCPListener) {
 	listener = &RAWTCPListener{}
 
 	listener.c_packets = make(chan *pcap.Packet, 100)
@@ -41,7 +40,6 @@ func RAWTCPListen(device string, port int) (listener *RAWTCPListener) {
 	listener.messages = make(map[uint32]*TCPMessage)
 
 	listener.device = device
-	listener.port = port
 
 	listener.startSniffer()
 
@@ -94,14 +92,20 @@ func (t *RAWTCPListener) startSniffer() {
 	}
 
 	h, err := pcap.Openlive(networkInterface, int32(4026), true, 0)
-	h.Setfilter("tcp dst port " + string(t.port))
+	if err != nil {
+		log.Fatal("Error while trying to listen", err)
+	}
+
+	/*h.Setfilter("tcp dst port " + string(t.port))*/
+	err = h.Setfilter(Settings.Filter)
+	if err != nil {
+		log.Fatal("Error while applying filter", Settings.Filter, ":", err)
+	}
+
     if Settings.NoReassembly {
         h.Setfilter("tcp[tcpflags] & tcp-push != 0")
     }
 
-	if err != nil {
-		log.Fatal("Error while trying to listen", err)
-	}
 
 	t.sniffer = h
 }
@@ -161,8 +165,7 @@ func (t *RAWTCPListener) readRAWSocket() {
 		switch pkt.Headers[1].(type) {
 		case *pcap.Tcphdr:
 			header := pkt.Headers[1].(*pcap.Tcphdr)
-			port := int(header.DestPort)
-			if port == t.port && (header.Flags & pcap.TCP_PSH) != 0 {
+			if (header.Flags & pcap.TCP_PSH) != 0 {
 				if Settings.NoReassembly {
 					t.NoReassemblyAnalysis(pkt)
 				} else {

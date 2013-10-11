@@ -20,7 +20,7 @@ const (
 
 // ListenerSettings contain all the needed configuration for setting up the listener
 type ListenerSettings struct {
-	Port    int
+	Filter string
 	Address string
 
 	ReplayAddress string
@@ -56,10 +56,12 @@ func init() {
 		return
 	}
 
-	flag.IntVar(&Settings.Port, "p", defaultPort, "Specify the http server port whose traffic you want to capture")
+	/*flag.IntVar(&Settings.Port, "p", defaultPort, "Specify the http server port whose traffic you want to capture")*/
 	/*flag.StringVar(&Settings.Address, "ip", defaultAddress, "Specify IP address to listen")*/
 
 	flag.StringVar(&Settings.Device, "i", defaultDevice, "Specify network interface to listen to")
+
+	flag.StringVar(&Settings.Filter, "pcap-filter", "tcp dst port 80", "Specify libpcap filter")
 
 	//replayAddress := flag.String("r", defaultReplayAddress, "Address of replay server.")
 	//Settings.ReplayServer(*replayAddress)

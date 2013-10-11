@@ -12,7 +12,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 )
 
@@ -60,11 +59,11 @@ func Run() {
 
 	Settings.ReplayServer(Settings.ReplayAddressRaw)
 
-	fmt.Println("Listening for HTTP traffic on", Settings.Device+":"+strconv.Itoa(Settings.Port))
+	fmt.Println("Listening for HTTP traffic on", Settings.Device, "with filter", Settings.Filter)
 	fmt.Println("Forwarding requests to replay server:", Settings.ReplayAddress, "Limit:", Settings.ReplayLimit)
 
 	// Sniffing traffic from given device
-	listener := RAWTCPListen(Settings.Device, Settings.Port)
+	listener := RAWTCPListen(Settings.Device)
 
 	var connection_pool *ConnectionPool
 	if Settings.PoolSize > 0 {
