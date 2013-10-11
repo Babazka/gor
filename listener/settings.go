@@ -32,6 +32,7 @@ type ListenerSettings struct {
 	Verbose bool
 	Twice bool
 	NoReassembly bool
+	NoReplay bool
 
 	PoolSize int
 
@@ -71,6 +72,8 @@ func init() {
 	flag.BoolVar(&Settings.Verbose, "verbose", false, "Log requests")
 
 	flag.BoolVar(&Settings.Twice, "twice", false, "duplicate every http request")
+
+	flag.BoolVar(&Settings.NoReplay, "noreplay", false, "do not send requests to replay server")
 
 	flag.BoolVar(&Settings.NoReassembly, "no-reasm", false, "Do not reassemble TCP streams, catch only segments with payload starting with GET / POST")
 

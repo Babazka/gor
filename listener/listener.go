@@ -91,6 +91,10 @@ func Run() {
 			currentRPS++
 		}
 
+		if Settings.NoReplay {
+			continue
+		}
+
 		if connection_pool == nil {
 			go sendMessage(m)
 		} else {
