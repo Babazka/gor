@@ -26,6 +26,8 @@ type ListenerSettings struct {
 	ReplayAddress string
 	ReplayAddressRaw string
 
+	RecordFile string
+
 	ReplayLimit int
 	PacketLimit int
 
@@ -61,6 +63,8 @@ func init() {
 	/*flag.StringVar(&Settings.Address, "ip", defaultAddress, "Specify IP address to listen")*/
 
 	flag.StringVar(&Settings.Device, "i", defaultDevice, "Specify network interface to listen to")
+
+	flag.StringVar(&Settings.RecordFile, "record-file", "", "file to store sniffed traffic in")
 
 	flag.StringVar(&Settings.Filter, "pcap-filter", "tcp dst port 80", "Specify libpcap filter")
 

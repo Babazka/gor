@@ -12,7 +12,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"time"
+	"encoding/gob"
 )
 
 // Debug enables logging only if "--verbose" flag passed
@@ -59,9 +61,18 @@ func Run() {
 
 	Settings.ReplayServer(Settings.ReplayAddressRaw)
 
-	fmt.Println("Listening for HTTP traffic on", Settings.Device, "with filter", Settings.Filter)
+	fmt.Println("Listening for HTTP traffic on ", Settings.Device, "with filter '", Settings.Filter, "'")
 	fmt.Println("Forwarding requests to replay server:", Settings.ReplayAddress, "Limit:", Settings.ReplayLimit)
 
+	sigchan := make(chan os.Signal, 1)
+	signal.Notify(sigchan, os.Interrupt, os.Kill)
+
+	go RunLoop()
+	s := <-sigchan
+	log.Println("Got signal: ", s)
+}
+
+func RunLoop() {
 	// Sniffing traffic from given device
 	listener := RAWTCPListen(Settings.Device)
 
@@ -72,6 +83,20 @@ func Run() {
 
 	currentTime := time.Now().UnixNano()
 	currentRPS := 0
+
+	var pkdump *os.File
+	var gobcoder *gob.Encoder
+	var err error
+
+	if Settings.RecordFile != "" {
+		pkdump, err = os.Create(Settings.RecordFile)
+		if err != nil {
+			log.Fatal("Cannot create record file:", err)
+		}
+
+		defer pkdump.Close()
+		gobcoder = gob.NewEncoder(pkdump)
+	}
 
 	for {
 		// Receiving TCPMessage object
@@ -89,6 +114,10 @@ func Run() {
 			}
 
 			currentRPS++
+		}
+
+		if pkdump != nil {
+			gobcoder.Encode(m.Bytes())
 		}
 
 		if Settings.NoReplay {
