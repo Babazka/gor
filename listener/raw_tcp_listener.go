@@ -152,7 +152,6 @@ func (t *RAWTCPListener) readRAWSocket() {
 		}
 
 		good := true
-		/*pkt.Decode()*/
 		my_decode(pkt, &good)
 		if !good {
 			continue
@@ -164,8 +163,7 @@ func (t *RAWTCPListener) readRAWSocket() {
 
 		switch pkt.Headers[1].(type) {
 		case *pcap.Tcphdr:
-			header := pkt.Headers[1].(*pcap.Tcphdr)
-			if (header.Flags & pcap.TCP_PSH) != 0 {
+			if len(pkt.Payload) != 0 {
 				if Settings.NoReassembly {
 					t.NoReassemblyAnalysis(pkt)
 				} else {
