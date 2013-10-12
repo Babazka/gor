@@ -7,6 +7,7 @@ package listener
 import (
 	"bufio"
 	"bytes"
+	"strings"
 	"fmt"
 	"log"
 	"net"
@@ -118,6 +119,11 @@ func RunLoop() {
 
 		if pkdump != nil {
 			gobcoder.Encode(m.Bytes())
+		}
+
+		if Settings.Verbose {
+			lines := strings.Split(string(m.Bytes()), "\r\n")
+			log.Printf(lines[0])
 		}
 
 		if Settings.NoReplay {
