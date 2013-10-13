@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 	"log"
+
+	"github.com/Babazka/gor/statsd"
 )
 
 // HttpResponse contains a host, a http request,
@@ -65,9 +67,12 @@ func (f *RequestFactory) BacklogMonitor() {
 	tick := time.Tick(1 * time.Second)
 	for {
 		<-tick
-		log.Printf("Backlog size %d; dropped %d reqs last second", len(f.c_requests), f.dropped_requests)
+		dropped := f.dropped_requests
 		// race condition, but fuck it, it's statistics
 		f.dropped_requests = 0
+		log.Printf("Backlog size %d; dropped %d reqs last second", len(f.c_requests), dropped)
+		statsd.C.Inc("dropped", dropped, 1.0)
+		statsd.C.Inc("backlog", len(f.c_requests), 1.0)
 	}
 }
 
@@ -147,6 +152,8 @@ func (f *RequestFactory) Worker(worker_id int) {
 		select {
 		case <-tick:
             log.Printf("Worker %d average RPS: %d", worker_id, rps / 1)
+			statsd.C.Inc("worker_output", rps, 1.0)
+
             rps = 0
 		case req := <-f.c_requests:
             rps += 1

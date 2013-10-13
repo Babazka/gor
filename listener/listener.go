@@ -16,6 +16,8 @@ import (
 	"os/signal"
 	"time"
 	"encoding/gob"
+
+	"github.com/Babazka/gor/statsd"
 )
 
 // Debug enables logging only if "--verbose" flag passed
@@ -107,6 +109,7 @@ func RunLoop() {
 			if (time.Now().UnixNano() - currentTime) > time.Second.Nanoseconds() {
 				currentTime = time.Now().UnixNano()
 				log.Printf("Output RPS: %d, unread %d", currentRPS, listener.UnreadCount())
+				statsd.C.Inc("output", currentRPS, 1.0)
 				currentRPS = 0
 			}
 

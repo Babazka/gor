@@ -15,6 +15,7 @@ import (
 
 	"github.com/Babazka/gor/listener"
 	"github.com/Babazka/gor/replay"
+	"github.com/Babazka/gor/statsd"
 )
 
 const (
@@ -25,6 +26,9 @@ var (
 	mode       string
 	cpuprofile = flag.String("gen-cpuprofile", "", "write cpu profile to file")
 	memprofile = flag.String("memprofile", "", "write memory profile to this file")
+
+	statsd_address = flag.String("statsd", "", "host:port of statsd")
+	statsd_prefix = flag.String("statsd-prefix", "", "additional statsd prefix (placed after the default which is 'gor.hostname.mode')")
 )
 
 func main() {
@@ -77,10 +81,32 @@ func main() {
 		})
 	}
 
+	if *statsd_address != "" {
+		prefix := makeStatsdPrefix(mode)
+		client, err := statsd.Dial(*statsd_address, prefix)
+		if err != nil {
+			log.Fatal("While connecting to statsd: ", err)
+		}
+		statsd.C = client
+	}
+
 	switch mode {
 	case "listen":
 		listener.Run()
 	case "replay":
 		replay.Run()
 	}
+}
+
+func makeStatsdPrefix(mode string) string {
+	prefix := "gor."
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Fatal("Cannot get hostname: ", err)
+	}
+	prefix = prefix + hostname + "." + mode
+	if *statsd_prefix != "" {
+		prefix = prefix + "-" + *statsd_prefix
+	}
+	return prefix
 }

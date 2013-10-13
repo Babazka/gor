@@ -37,6 +37,8 @@ import (
 	"runtime/pprof"
 	"os/signal"
 	"os"
+
+	"github.com/Babazka/gor/statsd"
 )
 
 const bufSize = 4096
@@ -146,6 +148,7 @@ func RunFile() {
         if (time.Now().UnixNano() - currentTime) > time.Second.Nanoseconds() {
             currentTime = time.Now().UnixNano()
             log.Printf("Input RPS: %d", currentRPS)
+			statsd.C.Inc("input", currentRPS, 1.0)
             currentRPS = 0
         }
         currentRPS += 1

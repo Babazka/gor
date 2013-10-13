@@ -4,6 +4,7 @@ import (
 	"log"
 	"time"
 	pcap "github.com/akrennmair/gopcap"
+	"github.com/Babazka/gor/statsd"
 )
 
 const (
@@ -141,6 +142,7 @@ func (t *RAWTCPListener) readRAWSocket() {
 			if (time.Now().UnixNano() - currentTime) > time.Second.Nanoseconds() {
 				currentTime = time.Now().UnixNano()
 				log.Printf("RPS: %d", currentRPS)
+				statsd.C.Inc("packets", currentRPS, 1.0)
 				currentRPS = 0
 			}
 
