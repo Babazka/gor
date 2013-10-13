@@ -55,3 +55,7 @@ func (self *ClientPool) GetClient() (*http.Client, *sync.Mutex) {
 	self.round_robin_index = (self.round_robin_index + 1) % self.size
 	return self.clients[client_number], &self.locks[client_number]
 }
+
+func (self *ClientPool) GetIthClient(i int) *http.Client {
+	return self.clients[i]
+}

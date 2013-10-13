@@ -19,6 +19,7 @@ type HttpResponse struct {
 	err  error
 }
 
+
 // RequestFactory processes requests
 //
 // Basic workflow:
@@ -31,6 +32,7 @@ type RequestFactory struct {
 	c_responses chan *HttpResponse
 	c_requests  chan *http.Request
 	hosts []*ForwardHost
+	dropped_requests int
 }
 
 // NewRequestFactory returns a RequestFactory pointer
@@ -38,13 +40,35 @@ type RequestFactory struct {
 func NewRequestFactory() (factory *RequestFactory) {
 	factory = &RequestFactory{}
 	factory.c_responses = make(chan *HttpResponse, 1)
-	factory.c_requests = make(chan *http.Request, 100)
+	factory.c_requests = make(chan *http.Request, Settings.BacklogSize)
 
 	factory.hosts = Settings.ForwardedHosts()
 
-	/*go factory.handleRequests()*/
+	factory.dropped_requests = 0
+
+	if Settings.UseWorkers {
+		log.Printf("starting workers")
+		for i := 0; i < Settings.ClientPoolSize; i++ {
+			go factory.Worker(i)
+		}
+	} else {
+		log.Printf("starting single handleRequests loop")
+		go factory.handleRequests()
+	}
+
+	go factory.BacklogMonitor()
 
 	return
+}
+
+func (f *RequestFactory) BacklogMonitor() {
+	tick := time.Tick(1 * time.Second)
+	for {
+		<-tick
+		log.Printf("Backlog size %d; dropped %d reqs last second", len(f.c_requests), f.dropped_requests)
+		// race condition, but fuck it, it's statistics
+		f.dropped_requests = 0
+	}
 }
 
 // customCheckRedirect disables redirects https://github.com/buger/gor/pull/15
@@ -55,21 +79,31 @@ func customCheckRedirect(req *http.Request, via []*http.Request) error {
 	return nil
 }
 
-// sendRequest forwards http request to a given host
 func (f *RequestFactory) sendRequest(host *ForwardHost, request *http.Request) {
+	f.sendRequestUsingSpecificConnection(host, request, -1)
+}
+
+// sendRequest forwards http request to a given host
+func (f *RequestFactory) sendRequestUsingSpecificConnection(host *ForwardHost, request *http.Request, connection_i int) {
 	var client *http.Client
 
 	if host.Clients != nil {
+		if connection_i == -1 {
+			var client_lock *sync.Mutex
+			client, client_lock = host.Clients.GetClient()
+			client_lock.Lock() // Prevent other goroutines from using this connection.
+							   // http.Client is goroutine-safe, but in its own way:
+							   // when used by 2+ goroutines, it will create new TCP
+							   // connections, not block.
+							   // We do not want this (that's why we created our own pool
+							   // in the first place).
+			defer client_lock.Unlock()
+		} else {
+			// no need for locking, each worker gets its own connection
+			client = host.Clients.GetIthClient(connection_i)
+		}
+
 		// reuse a connection
-		var client_lock *sync.Mutex
-		client, client_lock = host.Clients.GetClient()
-		client_lock.Lock() // Prevent other goroutines from using this connection.
-						   // http.Client is goroutine-safe, but in its own way:
-						   // when used by 2+ goroutines, it will create new TCP
-						   // connections, not block.
-						   // We do not want this (that's why we created our own pool
-						   // in the first place).
-		defer client_lock.Unlock()
 		// original sniffed request may contain Connection: close, we do not want it
 		request.Header.Del("Connection") // default for HTTP/1.1 assumed keep-alive
 	} else {
@@ -102,31 +136,67 @@ func (f *RequestFactory) sendRequest(host *ForwardHost, request *http.Request) {
 	//f.c_responses <- &HttpResponse{host, request, resp, err}
 }
 
-// handleRequests and their responses
-func (f *RequestFactory) handleRequests() {
-	hosts := Settings.ForwardedHosts()
+func (f *RequestFactory) Worker(worker_id int) {
+	hosts := f.hosts
 
-	tick := time.Tick(10 * time.Second)
+	tick := time.Tick(1 * time.Second)
 
     rps := 0
 
 	for {
 		select {
 		case <-tick:
-            log.Printf("RF average RPS: %d", rps / 10)
+            log.Printf("Worker %d average RPS: %d", worker_id, rps / 1)
             rps = 0
 		case req := <-f.c_requests:
             rps += 1
-			for _, host := range hosts {
-				// Ensure that we have actual stats for given timestamp
-				host.Stat.Touch()
+			if len(hosts) < 1 {
+				continue
+			}
+			host := hosts[0]
+			// Ensure that we have actual stats for given timestamp
+			host.Stat.Touch()
 
-				if host.Limit == 0 || host.Stat.Count < host.Limit {
-					// Increment Stat.Count
-					host.Stat.IncReq()
+			if host.Limit == 0 || host.Stat.Count < host.Limit {
+				// Increment Stat.Count
+				host.Stat.IncReq()
 
-					go f.sendRequest(host, req)
-				}
+				f.sendRequestUsingSpecificConnection(host, req, worker_id)
+			}
+		case resp := <-f.c_responses:
+			// Increment returned http code stats, and elapsed time
+			resp.host.Stat.IncResp(resp)
+		}
+	}
+}
+
+// handleRequests and their responses
+func (f *RequestFactory) handleRequests() {
+	hosts := f.hosts
+
+	tick := time.Tick(1 * time.Second)
+
+    rps := 0
+
+	for {
+		select {
+		case <-tick:
+            log.Printf("RF average RPS: %d, backlog len %d", rps / 1, len(f.c_requests))
+            rps = 0
+		case req := <-f.c_requests:
+            rps += 1
+			if len(hosts) < 1 {
+				continue
+			}
+			host := hosts[0]
+			// Ensure that we have actual stats for given timestamp
+			host.Stat.Touch()
+
+			if host.Limit == 0 || host.Stat.Count < host.Limit {
+				// Increment Stat.Count
+				host.Stat.IncReq()
+
+				go f.sendRequest(host, req)
 			}
 		case resp := <-f.c_responses:
 			// Increment returned http code stats, and elapsed time
@@ -136,12 +206,15 @@ func (f *RequestFactory) handleRequests() {
 }
 
 // Add request to channel for further processing
-/*
 func (f *RequestFactory) Add(request *http.Request) {
-	f.c_requests <- request
+	if len(f.c_requests) > Settings.BacklogSize - 100 {
+		f.dropped_requests += 1
+	} else {
+		f.c_requests <- request
+	}
 }
-*/
 
+/*
 func (f *RequestFactory) Add(request *http.Request) {
 	if len(f.hosts) < 1 {
 		return
@@ -149,3 +222,4 @@ func (f *RequestFactory) Add(request *http.Request) {
 	host := f.hosts[0]
 	go f.sendRequest(host, request)
 }
+*/

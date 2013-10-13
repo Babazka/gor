@@ -20,19 +20,15 @@ type ForwardHost struct {
 // ReplaySettings ListenerSettings contain all the needed configuration for setting up the replay
 type ReplaySettings struct {
 	Host string
-
 	Address        string
-	Unix        string
 	ForwardAddress string
-
 	Cpuprofile string
-
 	ReplayFile string
-
 	Verbose bool
-
+	SyncRequestParsing bool
+	UseWorkers bool
+	BacklogSize int
 	PersistentConnections bool
-
 	ClientPoolSize int
 }
 
@@ -92,7 +88,13 @@ func init() {
 
 	flag.BoolVar(&Settings.Verbose, "verbose", false, "Log requests")
 
+	flag.BoolVar(&Settings.UseWorkers, "use-workers", false, "Use workers, each per client connection")
+
+	flag.BoolVar(&Settings.SyncRequestParsing, "sync-request-parsing", false, "parse HTTP requests as they are read, not in separate goroutines")
+
 	flag.BoolVar(&Settings.PersistentConnections, "persistent-connections", false, "Set this option to use together with connection pool in listen servers")
 
 	flag.IntVar(&Settings.ClientPoolSize, "client-pool-size", defaultClientPoolSize, "size of a pool of connections to forward servers (default: no pool, open a connection per request).\n\tUsing a pool allows the usage of HTTP keep-alive when possible.")
+
+	flag.IntVar(&Settings.BacklogSize, "backlog-size", 10000, "number of requests to keep inside replay at any given moment (works with --use-workers)")
 }

@@ -150,16 +150,22 @@ func RunFile() {
         }
         currentRPS += 1
 
-		go func() {
-			if request, err := ParseRequest(msg); err != nil {
-				Debug("Error while parsing request", err, msg)
-			} else {
-				Debug("Adding request", request)
-				rf.Add(request)
-			}
-		}()
+		ParseAndAdd(msg, rf, !Settings.SyncRequestParsing)
 	}
 	log.Println("read a total of ", i, "requests from file")
+}
+
+func ParseAndAdd(msg []byte, rf *RequestFactory, async bool) {
+	if async {
+		go ParseAndAdd(msg, rf, false)
+		return
+	}
+	if request, err := ParseRequest(msg); err != nil {
+		Debug("Error while parsing request", err, msg)
+	} else {
+		Debug("Adding request", request)
+		rf.Add(request)
+	}
 }
 
 func handleConnection(conn net.Conn, rf *RequestFactory) error {
@@ -187,23 +193,13 @@ func handleConnection(conn net.Conn, rf *RequestFactory) error {
 		}
 	}
 
-	go func() {
-		if request, err := ParseRequest(response); err != nil {
-			Debug("Error while parsing request", err, response)
-		} else {
-			Debug("Adding request", request)
-
-			rf.Add(request)
-		}
-	}()
+	ParseAndAdd(buf, rf, !Settings.SyncRequestParsing)
 
 	return nil
 }
 
 func handlePersistentConnection(conn net.Conn, rf *RequestFactory) error {
 	defer conn.Close()
-
-	var buf []byte
 
 	decoder := gob.NewDecoder(conn)
 
@@ -212,6 +208,7 @@ func handlePersistentConnection(conn net.Conn, rf *RequestFactory) error {
 
 
 	for {
+		var buf []byte
 		err := decoder.Decode(&buf)
 		if err == io.EOF {
 			return nil
@@ -227,15 +224,7 @@ func handlePersistentConnection(conn net.Conn, rf *RequestFactory) error {
         }
         currentRPS += 1
 
-		go func() {
-			if request, err := ParseRequest(buf); err != nil {
-				Debug("Error while parsing request", err, buf)
-			} else {
-				Debug("Adding request", request)
-
-				rf.Add(request)
-			}
-		}()
+		ParseAndAdd(buf, rf, !Settings.SyncRequestParsing)
 	}
 
 	return nil
