@@ -28,11 +28,15 @@ import (
 	"bufio"
 	"time"
 	"bytes"
+	"strings"
 	"io"
 	"log"
 	"net"
 	"net/http"
 	"encoding/gob"
+	"runtime/pprof"
+	"os/signal"
+	"os"
 )
 
 const bufSize = 4096
@@ -57,10 +61,35 @@ func ParseRequest(data []byte) (request *http.Request, err error) {
 // Replay server listen to UDP traffic from Listeners
 // Each request processed by RequestFactory
 func Run() {
-	/*listener, err := net.Listen("tcp", Settings.Address)*/
-	listener, err := net.Listen("unix", Settings.Address)
+	if Settings.Cpuprofile != "" {
+		pf, err := os.Create(Settings.Cpuprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(pf)
+		defer pprof.StopCPUProfile()
+	}
 
-	log.Println("Starting replay server at:", Settings.Address)
+	if Settings.ReplayFile != "" {
+		go RunFile()
+	} else {
+		go RunListener()
+	}
+
+	sigchan := make(chan os.Signal, 1)
+	signal.Notify(sigchan, os.Interrupt, os.Kill)
+	sig := <-sigchan
+	log.Println("Received signal ", sig)
+}
+
+func RunListener() {
+	family := "tcp"
+	if strings.HasPrefix(Settings.Address, "/") {
+		family = "unix"
+	}
+	listener, err := net.Listen(family, Settings.Address)
+
+	log.Println("Starting replay server at ", family, ":", Settings.Address)
 
 	if err != nil {
 		log.Fatal("Can't start:", err)
@@ -87,6 +116,50 @@ func Run() {
 		}
 	}
 
+}
+
+func RunFile() {
+	f, err := os.Open(Settings.ReplayFile)
+
+	if err != nil {
+		log.Fatal("cannot open replay file: ", err)
+	}
+
+	rf := NewRequestFactory()
+
+	currentTime := time.Now().UnixNano()
+	currentRPS := 0
+
+	decoder := gob.NewDecoder(f)
+	i := 0
+	for {
+		var msg []byte
+		err = decoder.Decode(&msg)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatal("replay file decoding error: ", err)
+		}
+		i += 1
+
+        if (time.Now().UnixNano() - currentTime) > time.Second.Nanoseconds() {
+            currentTime = time.Now().UnixNano()
+            log.Printf("Input RPS: %d", currentRPS)
+            currentRPS = 0
+        }
+        currentRPS += 1
+
+		go func() {
+			if request, err := ParseRequest(msg); err != nil {
+				Debug("Error while parsing request", err, msg)
+			} else {
+				Debug("Adding request", request)
+				rf.Add(request)
+			}
+		}()
+	}
+	log.Println("read a total of ", i, "requests from file")
 }
 
 func handleConnection(conn net.Conn, rf *RequestFactory) error {
