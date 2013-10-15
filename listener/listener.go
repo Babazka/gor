@@ -117,8 +117,10 @@ func RunLoop() {
 		if Settings.ReplayLimit != 0 {
 			if (time.Now().UnixNano() - currentTime) > time.Second.Nanoseconds() {
 				currentTime = time.Now().UnixNano()
-				log.Printf("Output RPS: %d, unread %d", currentRPS, listener.UnreadCount())
+				unread := listener.UnreadCount()
+				log.Printf("Output RPS: %d, unread %d", currentRPS, unread)
 				statsd.C.Inc("output", currentRPS, 1.0)
+				statsd.C.Inc("unread", unread, 1.0)
 				currentRPS = 0
 			}
 

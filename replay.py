@@ -14,8 +14,12 @@ import gevent
 import gevent.queue
 import time
 
+import statsd
+
 
 logger = logging.getLogger()
+
+statsd_client = None
 
 
 class Counter(object):
@@ -28,10 +32,16 @@ class Counter(object):
         t = int(time.time())
         if t != self.t:
             logger.info('C %s: %d per second', self.name, self.v)
+            if statsd_client:
+                statsd_client.incr(self.name, self.v)
+            self.on_tick()
             self.v = 1
             self.t = t
         else:
             self.v += 1
+
+    def on_tick(self):
+        pass
 
 
 class Listener(object):
@@ -55,9 +65,17 @@ class Listener(object):
         i = self.i
         queue = self.queue
         incoming_requests_counter = Counter('input')
+
+        if statsd_client:
+            def on_tick():
+                statsd_client.incr('backlog', queue.qsize())
+
+            incoming_requests_counter.on_tick = on_tick
+
         drop_counter = Counter('dropped')
         logger.info('Listener %d started', i)
         len_limit = self.options.backlog - self.options.backlog_breathing_space
+
         while self.running:
             q = self.next_query()
             if not q:
@@ -130,7 +148,9 @@ def setup_options():
     parser = OptionParser()
     parser.add_option("--socket", dest="unix_socket", default="/tmp/mysock.dgram.0", action="store", help=u"path to unix seqpacket socket")
     parser.add_option("--threads", dest="threads", type=int, default=1, action="store", help=u"number of gevent threads")
-    parser.add_option("--upstream", dest="upstream", default="", action="store", help=u"address to send HTTP requests to")
+    parser.add_option("--upstream", dest="upstream", default="", action="store", help=u"host:port to send HTTP requests to")
+
+    parser.add_option("--statsd", dest="statsd", default="", action="store", help=u"host:port of statsd")
 
     parser.add_option("--backlog", dest="backlog", type=int, default=30000, action="store", help=u"size of backlog queue")
     parser.add_option("--backlog-breathing-space", dest="backlog_breathing_space", type=int, default=500, action="store", help=u"backlog breathing space")
@@ -157,7 +177,7 @@ def get_dgram_socket(addr):
 
 
 def main():
-    global logger
+    global logger, statsd_client
     options, args = setup_options()
     logging.basicConfig(stream=sys.stdout, level=getattr(logging, options.loglevel), format="%(asctime)s :: %(message)s")
     logger = logging.getLogger()
@@ -166,6 +186,11 @@ def main():
 
     conn = get_dgram_socket(options.unix_socket)
     logger.info('spawning workers...')
+
+    if options.statsd:
+        host, port = options.statsd.split(':')
+        prefix = 'gor.' + socket.gethostname().split('.')[0] + '.replay'
+        statsd_client = statsd.StatsClient(host, port, prefix)
 
     total_output_counter = Counter('worker_output')
     parse_errors_counter = Counter('parse_errors')
