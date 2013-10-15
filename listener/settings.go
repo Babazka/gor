@@ -35,6 +35,7 @@ type ListenerSettings struct {
 	Dgram bool
 	Twice bool
 	Thrice bool
+	TwoTimesMore bool
 	NoReassembly bool
 	NoReplay bool
 
@@ -79,6 +80,7 @@ func init() {
 
 	flag.BoolVar(&Settings.Twice, "twice", false, "duplicate every http request")
 	flag.BoolVar(&Settings.Thrice, "thrice", false, "duplicate every http request two more times")
+	flag.BoolVar(&Settings.TwoTimesMore, "two-times-more", false, "duplicate every http request another two times")
 
 	flag.BoolVar(&Settings.Dgram, "dgram", false, "use datagram socket")
 

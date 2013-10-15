@@ -67,6 +67,10 @@ func (t *RAWTCPListener) listen() {
 				t.c_messages <- message
 				t.c_messages <- message
 			}
+			if Settings.TwoTimesMore {
+				t.c_messages <- message
+				t.c_messages <- message
+			}
 			delete(t.messages, message.Ack)
 
 		// We need to use channels to process each packet to avoid data races
