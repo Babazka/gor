@@ -31,7 +31,12 @@ func Debug(v ...interface{}) {
 func ReplayServer() (conn net.Conn, err error) {
 	// Connection to replay server
 	//conn, err = net.Dial("tcp", Settings.ReplayAddress)
-	conn, err = net.Dial("unix", Settings.ReplayAddress)
+	//conn, err = net.Dial("unix", Settings.ReplayAddress)
+	if Settings.Dgram {
+		conn, err = net.Dial("unix", Settings.ReplayAddress)
+	} else {
+		conn, err = net.Dial("unixgram", Settings.ReplayAddress)
+	}
 
 	if err != nil {
 		log.Println("Connection error ", err, Settings.ReplayAddress)
@@ -45,7 +50,11 @@ func ReplayServerWithNumber(index int) (conn net.Conn, err error) {
 	// Connection to replay server
 	//conn, err = net.Dial("tcp", Settings.ReplayAddress)
 	address := fmt.Sprintf("%s.%d", Settings.ReplayAddress, index)
-	conn, err = net.Dial("unix", address)
+	if Settings.Dgram {
+		conn, err = net.Dial("unix", address)
+	} else {
+		conn, err = net.Dial("unixgram", address)
+	}
 
 	if err != nil {
 		log.Println("Connection error ", err, Settings.ReplayAddress)

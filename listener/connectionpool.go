@@ -100,7 +100,12 @@ func (self *ConnectionPool) SendUsingSpecificConnection(pool_index int, bytes []
 	var encoder *gob.Encoder
 
 	encoder = gob.NewEncoder(conn)
-	err = encoder.Encode(bytes)
+	if Settings.Dgram {
+		_, err = conn.Write(bytes)
+	} else {
+		err = encoder.Encode(bytes)
+	}
+
 	if err == nil {
 		return nil
 	}
@@ -113,7 +118,13 @@ func (self *ConnectionPool) SendUsingSpecificConnection(pool_index int, bytes []
 	}
 
 	encoder = gob.NewEncoder(conn)
-	err = encoder.Encode(bytes)
+
+	if Settings.Dgram {
+		_, err = conn.Write(bytes)
+	} else {
+		err = encoder.Encode(bytes)
+	}
+
 	if err != nil {
 		conn.Close()
 		self.connections[pool_index] = nil

@@ -32,6 +32,7 @@ type ListenerSettings struct {
 	PacketLimit int
 
 	Verbose bool
+	Dgram bool
 	Twice bool
 	NoReassembly bool
 	NoReplay bool
@@ -76,6 +77,8 @@ func init() {
 	flag.BoolVar(&Settings.Verbose, "verbose", false, "Log requests")
 
 	flag.BoolVar(&Settings.Twice, "twice", false, "duplicate every http request")
+
+	flag.BoolVar(&Settings.Dgram, "dgram", false, "use datagram socket")
 
 	flag.BoolVar(&Settings.NoReplay, "noreplay", false, "do not send requests to replay server")
 
