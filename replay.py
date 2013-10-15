@@ -190,7 +190,7 @@ def main():
     if options.statsd:
         host, port = options.statsd.split(':')
         prefix = 'gor.' + socket.gethostname().split('.')[0] + '.replay'
-        statsd_client = statsd.StatsClient(host, port, prefix)
+        statsd_client = statsd.StatsClient(host, int(port), prefix)
 
     total_output_counter = Counter('worker_output')
     parse_errors_counter = Counter('parse_errors')
