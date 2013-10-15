@@ -34,6 +34,7 @@ type ListenerSettings struct {
 	Verbose bool
 	Dgram bool
 	Twice bool
+	Thrice bool
 	NoReassembly bool
 	NoReplay bool
 
@@ -77,6 +78,7 @@ func init() {
 	flag.BoolVar(&Settings.Verbose, "verbose", false, "Log requests")
 
 	flag.BoolVar(&Settings.Twice, "twice", false, "duplicate every http request")
+	flag.BoolVar(&Settings.Thrice, "thrice", false, "duplicate every http request two more times")
 
 	flag.BoolVar(&Settings.Dgram, "dgram", false, "use datagram socket")
 
