@@ -15,6 +15,8 @@ import gevent.queue
 import time
 
 import statsd
+# https://github.com/gwik/geventhttpclient
+import geventhttpclient.httplib
 
 
 logger = logging.getLogger()
@@ -23,6 +25,7 @@ statsd_client = None
 
 
 class Counter(object):
+    """ Считает число событий за последнюю секунду, умеет отправлять в statsd """
     def __init__(self, name):
         self.name = name
         self.v = 0
@@ -45,6 +48,9 @@ class Counter(object):
 
 
 class Listener(object):
+    """ Читает из датаграммного юникс-сокета и кладет в очередь.
+        Следит за тем, чтобы очередь не переполнилась.
+    """
     def __init__(self, i, unixsock, queue, options):
         self.i = i
         self.unixsock = unixsock
@@ -90,6 +96,7 @@ class Listener(object):
 
 
 class Worker(object):
+    """ Берет запрос из очереди, быстренько парсит и отправляет в апстрим по keepalive-соединению """
     def __init__(self, i, queue, output_counter, parse_errors_counter, options):
         self.i = i
         self.queue = queue
@@ -105,9 +112,9 @@ class Worker(object):
             if ':' in host:
                 host, port = host.split(':')
                 port = int(port)
-            conn = httplib.HTTPConnection(host, port)
+            conn = geventhttpclient.httplib.HTTPConnection(host, port)
+            #conn = httplib.HTTPConnection(host, port)
         return conn
-
 
     def runloop(self):
         conn = self.connect()
@@ -134,6 +141,7 @@ class Worker(object):
                         parse_errors.count()
                         continue
                 logger.debug([method, url])
+                # TODO извлечь и сохранить X-Real-IP
             except Exception as e:
                 logger.debug('error whlie parsing request: %s %s', e, q)
                 parse_errors.count()
