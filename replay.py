@@ -72,10 +72,11 @@ class Listener(object):
 
 
 class Worker(object):
-    def __init__(self, i, queue, output_counter, options):
+    def __init__(self, i, queue, output_counter, parse_errors_counter, options):
         self.i = i
         self.queue = queue
         self.output_counter = output_counter
+        self.parse_errors_counter = parse_errors_counter
         self.running = True
         self.options = options
 
@@ -95,7 +96,7 @@ class Worker(object):
         i = self.i
         queue = self.queue
         output_counter = self.output_counter
-        parse_errors = Counter('parse_errors')
+        parse_errors = self.parse_errors_counter
         logger.info('Worker %d started', i)
         methodset = set(['GET', 'POST', 'PUT', 'DELETE', 'HEAD'])
         while self.running:
@@ -167,12 +168,13 @@ def main():
     logger.info('spawning workers...')
 
     total_output_counter = Counter('worker_output')
+    parse_errors_counter = Counter('parse_errors')
 
     queue = gevent.queue.Queue(maxsize=options.backlog)
 
     listener = Listener(0, conn, queue, options)
     listener_thread = gevent.spawn(listener.runloop)
-    workers = [Worker(i, queue, total_output_counter, options) for i in xrange(options.threads)]
+    workers = [Worker(i, queue, total_output_counter, parse_errors_counter, options) for i in xrange(options.threads)]
     threads = [gevent.spawn(worker.runloop) for worker in workers]
     listener_thread.join()
 
