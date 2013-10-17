@@ -157,6 +157,9 @@ func sendMessageViaConnectionPool(m *TCPMessage, pool *ConnectionPool) {
 	err := pool.SendUsingSomeConnection(m.Bytes())
 	if err != nil {
 		Debug("Error while sending requests", err)
+		if Settings.DieOnConnectionError {
+			log.Fatal("Dying on connection error: ", err)
+		}
 	}
 }
 

@@ -31,6 +31,8 @@ type ListenerSettings struct {
 	ReplayLimit int
 	PacketLimit int
 
+	DieOnConnectionError bool
+
 	Verbose bool
 	Dgram bool
 	Twice bool
@@ -85,6 +87,8 @@ func init() {
 	flag.BoolVar(&Settings.Dgram, "dgram", false, "use datagram socket")
 
 	flag.BoolVar(&Settings.NoReplay, "noreplay", false, "do not send requests to replay server")
+
+	flag.BoolVar(&Settings.DieOnConnectionError, "die-if-replay-server-is-unreachable", false, "die if replay server is unreachable")
 
 	flag.BoolVar(&Settings.NoReassembly, "no-reasm", false, "Do not reassemble TCP streams, catch only segments with payload starting with GET / POST")
 
