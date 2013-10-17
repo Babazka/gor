@@ -1,0 +1,2 @@
+gevent==1.0dev
+git+https://github.com/gwik/geventhttpclient.git==1.1
