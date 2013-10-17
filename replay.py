@@ -166,13 +166,13 @@ class Worker(object):
                 try:
                     conn.request(method, url, body)
                     r = conn.getresponse()
-                    resp.data = r.read()
-                    if 400 <= resp.status < 500:
+                    resp_data = r.read()
+                    if 400 <= r.status < 500:
                         c400s.count()
-                        logger.debug('response code %d: %s', resp.status, resp.data)
-                    elif 500 <= resp.status < 600:
+                        logger.debug('response code %d: %s', r.status, resp_data)
+                    elif 500 <= r.status < 600:
                         c500s.count()
-                        logger.debug('response code %d: %s', resp.status, resp.data)
+                        logger.debug('response code %d: %s', r.status, resp_data)
                 except Exception as e:
                     logger.debug('error whlie sending request: %s %s', e, q)
 
