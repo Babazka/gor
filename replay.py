@@ -97,13 +97,14 @@ class Listener(object):
 
 class Worker(object):
     """ Берет запрос из очереди, быстренько парсит и отправляет в апстрим по keepalive-соединению """
-    def __init__(self, i, queue, output_counter, parse_errors_counter, options):
+    def __init__(self, i, queue, output_counter, parse_errors_counter, c400s, c500s, options):
         self.i = i
         self.queue = queue
         self.output_counter = output_counter
         self.parse_errors_counter = parse_errors_counter
         self.running = True
         self.options = options
+        self.c400s, self.c500s = c400s, c500s
 
     def connect(self):
         conn = None
@@ -125,6 +126,7 @@ class Worker(object):
         logger.info('Worker %d started', i)
         methodset = set(['GET', 'POST', 'PUT', 'DELETE', 'HEAD'])
         only_get = self.options.only_get
+        c400s, c500s = self.c400s, self.c500s
 
         while self.running:
             q = queue.get()
@@ -164,6 +166,13 @@ class Worker(object):
                 try:
                     conn.request(method, url, body)
                     r = conn.getresponse()
+                    resp.data = r.read()
+                    if 400 <= resp.status < 500:
+                        c400s.count()
+                        logger.debug('response code %d: %s', resp.status, resp.data)
+                    elif 500 <= resp.status < 600:
+                        c500s.count()
+                        logger.debug('response code %d: %s', resp.status, resp.data)
                 except Exception as e:
                     logger.debug('error whlie sending request: %s %s', e, q)
 
@@ -221,12 +230,14 @@ def main():
 
     total_output_counter = Counter('worker_output')
     parse_errors_counter = Counter('parse_errors')
+    c400s = Counter('response_400s')
+    c500s = Counter('response_500s')
 
     queue = gevent.queue.Queue(maxsize=options.backlog)
 
     listener = Listener(0, conn, queue, options)
     listener_thread = gevent.spawn(listener.runloop)
-    workers = [Worker(i, queue, total_output_counter, parse_errors_counter, options) for i in xrange(options.threads)]
+    workers = [Worker(i, queue, total_output_counter, parse_errors_counter, c400s, c500s, options) for i in xrange(options.threads)]
     threads = [gevent.spawn(worker.runloop) for worker in workers]
     listener_thread.join()
 
