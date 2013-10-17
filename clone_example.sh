@@ -39,6 +39,9 @@ L_PACKET_LIMIT=100000
 # HTTP requests per second
 L_HTTP_LIMIT=25000
 
+# extra params to pass to replay server
+EXTRA_REPLAY_PARAMS=
+
 
 # [ misc settings ] ==================================================
 #
