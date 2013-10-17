@@ -166,11 +166,8 @@ class Worker(object):
                     conn.request(method, url, body, headers_dict)
                     r = conn.getresponse()
                     resp_data = r.read()
-                    if 400 <= r.status < 500:
-                        c400s.count()
-                        logger.debug('response code %d: %s', r.status, resp_data)
-                    elif 500 <= r.status < 600:
-                        c500s.count()
+                    if 400 <= r.status < 600 and statsd_client:
+                        statsd_client.incr('response_%d' % r.status, rate=0.1)
                         logger.debug('response code %d: %s', r.status, resp_data)
                 except Exception as e:
                     logger.debug('error whlie sending request: %s %s', e, q)
