@@ -132,7 +132,6 @@ class Worker(object):
             q = queue.get()
             if not q:
                 continue
-            output_counter.count()
             try:
                 headers, body = q.split('\r\n\r\n', 1)
                 header_lines = headers.split('\r\n')
@@ -164,7 +163,7 @@ class Worker(object):
                 continue
             if conn:
                 try:
-                    conn.request(method, url, body)
+                    conn.request(method, url, body, headers_dict)
                     r = conn.getresponse()
                     resp_data = r.read()
                     if 400 <= r.status < 500:
@@ -175,6 +174,8 @@ class Worker(object):
                         logger.debug('response code %d: %s', r.status, resp_data)
                 except Exception as e:
                     logger.debug('error whlie sending request: %s %s', e, q)
+                else:
+                    output_counter.count()
 
 
 def setup_options():
