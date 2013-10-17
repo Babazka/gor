@@ -124,7 +124,7 @@ class Worker(object):
         parse_errors = self.parse_errors_counter
         logger.info('Worker %d started', i)
         methodset = set(['GET', 'POST', 'PUT', 'DELETE', 'HEAD'])
-        only_get = options.only_get
+        only_get = self.options.only_get
 
         while self.running:
             q = queue.get()
@@ -151,9 +151,12 @@ class Worker(object):
                 parse_errors.count()
                 continue
             if conn:
-                conn.request(method, url)
-                r = conn.getresponse()
-                r.read()
+                try:
+                    conn.request(method, url)
+                    r = conn.getresponse()
+                    r.read()
+                except Exception as e:
+                    logger.debug('error whlie sending request: %s %s', e, q)
 
 
 def setup_options():
