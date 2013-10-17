@@ -196,7 +196,7 @@ def main():
     logging.basicConfig(stream=sys.stdout, level=getattr(logging, options.loglevel), format="%(asctime)s :: %(message)s")
     logger = logging.getLogger()
 
-    if os.path.isfile(options.unix_socket):
+    if os.path.exists(options.unix_socket):
         os.unlink(options.unix_socket)
 
     conn = get_dgram_socket(options.unix_socket)
