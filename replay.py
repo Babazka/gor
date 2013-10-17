@@ -152,7 +152,7 @@ class Worker(object):
                 continue
             if conn:
                 try:
-                    conn.request(method, url)
+                    conn.request(method, url, body)
                     r = conn.getresponse()
                     r.read()
                 except Exception as e:
