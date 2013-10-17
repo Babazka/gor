@@ -124,6 +124,8 @@ class Worker(object):
         parse_errors = self.parse_errors_counter
         logger.info('Worker %d started', i)
         methodset = set(['GET', 'POST', 'PUT', 'DELETE', 'HEAD'])
+        only_get = options.only_get
+
         while self.running:
             q = queue.get()
             if not q:
@@ -140,6 +142,8 @@ class Worker(object):
                     else:
                         parse_errors.count()
                         continue
+                if only_get and method != 'GET':
+                    continue
                 logger.debug([method, url])
                 # TODO извлечь и сохранить X-Real-IP
             except Exception as e:
@@ -157,6 +161,8 @@ def setup_options():
     parser.add_option("--socket", dest="unix_socket", default="/tmp/mysock.dgram.0", action="store", help=u"path to unix seqpacket socket")
     parser.add_option("--threads", dest="threads", type=int, default=1, action="store", help=u"number of gevent threads")
     parser.add_option("--upstream", dest="upstream", default="", action="store", help=u"host:port to send HTTP requests to")
+
+    parser.add_option("--only-GET", dest="only_get", default=False, action="store_true", help=u"forward only GET requests")
 
     parser.add_option("--statsd", dest="statsd", default="", action="store", help=u"host:port of statsd")
 
@@ -190,7 +196,8 @@ def main():
     logging.basicConfig(stream=sys.stdout, level=getattr(logging, options.loglevel), format="%(asctime)s :: %(message)s")
     logger = logging.getLogger()
 
-    os.unlink(options.unix_socket)
+    if os.path.is_file(options.unix_socket):
+        os.unlink(options.unix_socket)
 
     conn = get_dgram_socket(options.unix_socket)
     logger.info('spawning workers...')
