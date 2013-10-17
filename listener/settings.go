@@ -31,13 +31,12 @@ type ListenerSettings struct {
 	ReplayLimit int
 	PacketLimit int
 
+	Multiply int
+
 	DieOnConnectionError bool
 
 	Verbose bool
 	Dgram bool
-	Twice bool
-	Thrice bool
-	TwoTimesMore bool
 	NoReassembly bool
 	NoReplay bool
 
@@ -76,13 +75,11 @@ func init() {
 	//replayAddress := flag.String("r", defaultReplayAddress, "Address of replay server.")
 	//Settings.ReplayServer(*replayAddress)
 
+	flag.IntVar(&Settings.Multiply, "multiply", 1, "traffic multiplier")
+
 	flag.StringVar(&Settings.ReplayAddressRaw, "r", defaultReplayAddress, "Address of replay server.")
 
 	flag.BoolVar(&Settings.Verbose, "verbose", false, "Log requests")
-
-	flag.BoolVar(&Settings.Twice, "twice", false, "duplicate every http request")
-	flag.BoolVar(&Settings.Thrice, "thrice", false, "duplicate every http request two more times")
-	flag.BoolVar(&Settings.TwoTimesMore, "two-times-more", false, "duplicate every http request another two times")
 
 	flag.BoolVar(&Settings.Dgram, "dgram", false, "use datagram socket")
 

@@ -59,16 +59,7 @@ func (t *RAWTCPListener) listen() {
 			log.Printf("tick")
 		// If message ready for deletion it means that its also complete or expired by timeout
 		case message := <-t.c_del_message:
-			t.c_messages <- message
-			if Settings.Twice {
-				t.c_messages <- message
-			}
-			if Settings.Thrice {
-				t.c_messages <- message
-				t.c_messages <- message
-			}
-			if Settings.TwoTimesMore {
-				t.c_messages <- message
+			for i := 0; i < Settings.Multiply; i++ {
 				t.c_messages <- message
 			}
 			delete(t.messages, message.Ack)
