@@ -155,12 +155,19 @@ class Worker(object):
                 headers_dict_raw = dict(map(split_lower_1, header_lines))
                 logger.debug([method, url])
                 headers_dict = {}
-                headers_dict['Content-Type'] = headers_dict_raw.get('content-type', 'text/plain')
+                headers_dict['Content-Type'] = headers_dict_raw.get('content-type', 'text/plain').split(';')[0]
                 headers_dict['X-Real-IP'] = headers_dict_raw.get('x-real-ip', '127.0.0.1')
             except Exception as e:
                 logger.exception('error whlie parsing request: %s %s', e, '')
                 parse_errors.count()
                 continue
+
+            if not conn:
+                try:
+                    conn = self.connect()
+                except Exception as e:
+                    logger.exception('error whlie reconnecting: %s', e)
+
             if conn:
                 try:
                     conn.request(method, url, body, headers_dict)
@@ -171,6 +178,8 @@ class Worker(object):
                         logger.debug('response code %d: %s', r.status, resp_data)
                 except Exception as e:
                     logger.debug('error whlie sending request: %s %s', e, q)
+                    # force reconnect on next request
+                    conn = None
                 else:
                     output_counter.count()
 
