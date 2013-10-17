@@ -133,7 +133,8 @@ class Worker(object):
             output_counter.count()
             try:
                 headers, body = q.split('\r\n\r\n', 1)
-                method, url, _ = headers.split(' ', 2)
+                header_lines = headers.split('\r\n')
+                method, url, _ = header_lines[0].split(' ', 2)
                 if method not in methodset:
                     if method.endswith('POST'):
                         method = 'POST'
@@ -144,17 +145,25 @@ class Worker(object):
                         continue
                 if only_get and method != 'GET':
                     continue
+                def split_lower_1(line):
+                    parts = line.split(':', 1)
+                    if len(parts) == 1:
+                        return '', ''
+                    a, b = parts
+                    return a.lower(), b.strip()
+                headers_dict_raw = dict(map(split_lower_1, header_lines))
                 logger.debug([method, url])
-                # TODO извлечь и сохранить X-Real-IP
+                headers_dict = {}
+                headers_dict['Content-Type'] = headers_dict_raw.get('content-type', 'text/plain')
+                headers_dict['X-Real-IP'] = headers_dict_raw.get('x-real-ip', '127.0.0.1')
             except Exception as e:
-                logger.debug('error whlie parsing request: %s %s', e, q)
+                logger.exception('error whlie parsing request: %s %s', e, '')
                 parse_errors.count()
                 continue
             if conn:
                 try:
                     conn.request(method, url, body)
                     r = conn.getresponse()
-                    r.read()
                 except Exception as e:
                     logger.debug('error whlie sending request: %s %s', e, q)
 
