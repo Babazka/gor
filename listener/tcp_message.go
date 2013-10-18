@@ -65,35 +65,20 @@ func (t *TCPMessage) Timeout() {
 	t.c_del_message <- t // Notify RAWListener that message is ready to be send to replay server
 }
 
-type SortablePackets []*pcap.Packet
-
-func (s SortablePackets) Len() int      { return len(s) }
-func (s SortablePackets) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-
-
-func (s SortablePackets) Less(i, j int) bool {
-	seq_i := s[i].Headers[1].(*pcap.Tcphdr).Seq
-	seq_j := s[j].Headers[1].(*pcap.Tcphdr).Seq
-	return seq_i < seq_j
-}
-
 // Bytes sorts packets in right orders and return message content
 func (t *TCPMessage) Bytes() (output []byte) {
-	/*mk := make([]int, len(t.packets))*/
+	mk := make([]int, len(t.packets))
 
-	/*i := 0*/
-	/*for k, p := range t.packets {*/
-		/*seq := int(p.Headers[1].(*pcap.Tcphdr).Seq)*/
-		/*mk[i] = seq*/
-		/*i++*/
-	/*}*/
+	i := 0
+	for k, _ := range t.packets {
+		mk[i] = k
+		i++
+	}
 
-	/*sort.Ints(mk)*/
+	sort.Ints(mk)
 
-	sort.Sort(SortablePackets(t.packets))
-
-	for _, p := range t.packets {
-		output = append(output, p.Payload...)
+	for _, k := range mk {
+		output = append(output, t.packets[k].Payload...)
 	}
 
 	return
