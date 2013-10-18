@@ -36,7 +36,7 @@ function start_listener() {
         -r "$UNIX_SOCKET_PATH|$L_HTTP_LIMIT" \
         --pool-size $REPLAY_COUNT --packet-limit $L_PACKET_LIMIT \
         --multiply $TRAFFIC_MULTIPLIER \
-        --die-if-replay-server-is-unreachable
+        --die-if-replay-server-is-unreachable --dgram
 }
 
 kill_old_replays
