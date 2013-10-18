@@ -16,6 +16,7 @@ const MSG_EXPIRE = 200 * time.Millisecond
 // Message is received if we didn't receive any packets for 200ms
 type TCPMessage struct {
 	Ack     uint32 // Message ID
+	Key     [4]uint32
 	packets []*pcap.Packet
 
 	timer *time.Timer // Used for expire check
@@ -26,8 +27,8 @@ type TCPMessage struct {
 }
 
 // NewTCPMessage pointer created from a Acknowledgment number and a channel of messages readuy to be deleted
-func NewTCPMessage(Ack uint32, c_del chan *TCPMessage) (msg *TCPMessage) {
-	msg = &TCPMessage{Ack: Ack}
+func NewTCPMessage(Ack uint32, Key [4]uint32, c_del chan *TCPMessage) (msg *TCPMessage) {
+	msg = &TCPMessage{Ack: Ack, Key: Key}
 
 	msg.c_packets = make(chan *pcap.Packet)
 	msg.c_del_message = c_del // used for notifying that message completed or expired

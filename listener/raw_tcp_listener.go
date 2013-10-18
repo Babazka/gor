@@ -19,7 +19,7 @@ const (
 // Since we can't use default TCP libraries RAWTCPLitener implements own TCP layer
 // TCP packets is parsed using tcp_packet.go, and flow control is managed by tcp_message.go
 type RAWTCPListener struct {
-	messages map[uint32]*TCPMessage // buffer of TCPMessages waiting to be send
+	messages map[[4]uint32]*TCPMessage // buffer of TCPMessages waiting to be send
 
 	c_packets  chan *pcap.Packet
 	c_messages chan *TCPMessage // Messages ready to be send to client
@@ -38,7 +38,7 @@ func RAWTCPListen(device string) (listener *RAWTCPListener) {
 	listener.c_packets = make(chan *pcap.Packet, 100)
 	listener.c_messages = make(chan *TCPMessage, MSG_QUEUE_SIZE)
 	listener.c_del_message = make(chan *TCPMessage, 100)
-	listener.messages = make(map[uint32]*TCPMessage)
+	listener.messages = make(map[[4]uint32]*TCPMessage)
 
 	listener.device = device
 
@@ -55,19 +55,32 @@ func (t *RAWTCPListener) listen() {
 	for {
 		select {
 		case <-tick:
-			/*t.messages = make(map[uint32]*TCPMessage)*/
 			log.Printf("tick")
 		// If message ready for deletion it means that its also complete or expired by timeout
 		case message := <-t.c_del_message:
+			mk := message.Key
 			for i := 0; i < Settings.Multiply; i++ {
 				t.c_messages <- message
 			}
-			delete(t.messages, message.Ack)
+			delete(t.messages, mk)
 
 		// We need to use channels to process each packet to avoid data races
 		case packet := <-t.c_packets:
 			t.processTCPPacket(packet)
 		}
+	}
+}
+
+func FourBytesToUint32(a []byte) uint32 {
+	return uint32(a[0]) | uint32(a[1]) << 8 | uint32(a[2]) << 16 | uint32(a[3]) << 32
+}
+
+func GetConnKey(packet *pcap.Packet) [4]uint32 {
+	return [4]uint32{
+		FourBytesToUint32(packet.Headers[0].(*pcap.Iphdr).SrcIp),
+		uint32(packet.Headers[1].(*pcap.Tcphdr).SrcPort),
+		FourBytesToUint32(packet.Headers[0].(*pcap.Iphdr).DestIp),
+		uint32(packet.Headers[1].(*pcap.Tcphdr).DestPort),
 	}
 }
 
@@ -196,13 +209,14 @@ func (t *RAWTCPListener) NoReassemblyAnalysis(packet *pcap.Packet) {
 func (t *RAWTCPListener) processTCPPacket(packet *pcap.Packet) {
 	var message *TCPMessage
 	ack := packet.Headers[1].(*pcap.Tcphdr).Ack
+	key := GetConnKey(packet)
 
-	message, ok := t.messages[ack]
+	message, ok := t.messages[key]
 
 	if !ok {
 		// We sending c_del_message channel, so message object can communicate with Listener and notify it if message completed
-		message = NewTCPMessage(ack, t.c_del_message)
-		t.messages[ack] = message
+		message = NewTCPMessage(ack, key, t.c_del_message)
+		t.messages[key] = message
 	}
 
 	// Adding packet to message
