@@ -33,9 +33,9 @@ func ReplayServer() (conn net.Conn, err error) {
 	//conn, err = net.Dial("tcp", Settings.ReplayAddress)
 	//conn, err = net.Dial("unix", Settings.ReplayAddress)
 	if Settings.Dgram {
-		conn, err = net.Dial("unix", Settings.ReplayAddress)
-	} else {
 		conn, err = net.Dial("unixgram", Settings.ReplayAddress)
+	} else {
+		conn, err = net.Dial("unix", Settings.ReplayAddress)
 	}
 
 	if err != nil {
@@ -51,9 +51,9 @@ func ReplayServerWithNumber(index int) (conn net.Conn, err error) {
 	//conn, err = net.Dial("tcp", Settings.ReplayAddress)
 	address := fmt.Sprintf("%s.%d", Settings.ReplayAddress, index)
 	if Settings.Dgram {
-		conn, err = net.Dial("unix", address)
-	} else {
 		conn, err = net.Dial("unixgram", address)
+	} else {
+		conn, err = net.Dial("unix", address)
 	}
 
 	if err != nil {
