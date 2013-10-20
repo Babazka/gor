@@ -126,8 +126,8 @@ class Worker(object):
         logger.info('Worker %d started', i)
         methodset = set(['GET', 'POST', 'PUT', 'DELETE', 'HEAD'])
         only_get = self.options.only_get
-        host_header = self.host_header
-        location_prefix = self.location_prefix
+        host_header = self.options.host_header
+        location_prefix = self.options.location_prefix
         c400s, c500s = self.c400s, self.c500s
 
         while self.running:
