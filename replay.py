@@ -126,6 +126,8 @@ class Worker(object):
         logger.info('Worker %d started', i)
         methodset = set(['GET', 'POST', 'PUT', 'DELETE', 'HEAD'])
         only_get = self.options.only_get
+        host_header = self.host_header
+        location_prefix = self.location_prefix
         c400s, c500s = self.c400s, self.c500s
 
         while self.running:
@@ -146,6 +148,8 @@ class Worker(object):
                         continue
                 if only_get and method != 'GET':
                     continue
+                if location_prefix:
+                    url = location_prefix + url
                 def split_lower_1(line):
                     parts = line.split(':', 1)
                     if len(parts) == 1:
@@ -157,6 +161,8 @@ class Worker(object):
                 headers_dict = {}
                 headers_dict['Content-Type'] = headers_dict_raw.get('content-type', 'text/plain').split(';')[0]
                 headers_dict['X-Real-IP'] = headers_dict_raw.get('x-real-ip', '127.0.0.1')
+                if host_header:
+                    headers_dict['Host'] = host_header
             except Exception as e:
                 logger.exception('error whlie parsing request: %s %s', e, '')
                 parse_errors.count()
@@ -191,6 +197,8 @@ def setup_options():
     parser.add_option("--upstream", dest="upstream", default="", action="store", help=u"host:port to send HTTP requests to")
 
     parser.add_option("--only-GET", dest="only_get", default=False, action="store_true", help=u"forward only GET requests")
+    parser.add_option("--location-prefix", dest="location_prefix", default="", action="store", help=u"prefix to add to URLs")
+    parser.add_option("--host-header", dest="host_header", default="", action="store", help=u"set host header")
 
     parser.add_option("--statsd", dest="statsd", default="", action="store", help=u"host:port of statsd")
 
