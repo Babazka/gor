@@ -20,6 +20,7 @@ function start_replays() {
         python replay.py $STATSD \
             --socket="$UNIX_SOCKET_PATH.$i" \
             --threads $THREADS --backlog $BACKLOG \
+            --multiply $TRAFFIC_MULTIPLIER \
             --upstream "$DEST_HOST_PORT" $EXTRA_REPLAY_PARAMS > /dev/null &
         REPLAY_PID=$!
         echo $REPLAY_PID >>$FILE_WITH_PIDS
@@ -35,7 +36,7 @@ function start_listener() {
         -i $IFACE --pcap-filter "$PCAP_FILTER" \
         -r "$UNIX_SOCKET_PATH|$L_HTTP_LIMIT" \
         --pool-size $REPLAY_COUNT --packet-limit $L_PACKET_LIMIT \
-        --multiply $TRAFFIC_MULTIPLIER \
+        --multiply $LISTENER_TRAFFIC_MULTIPLIER \
         --die-if-replay-server-is-unreachable --dgram
 }
 

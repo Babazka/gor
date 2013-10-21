@@ -90,11 +90,15 @@ class Listener(object):
             incoming_requests_counter.count()
             logger.debug('Listener %d got %s', i, q)
             if queue:
-                for i in xrange(multiplier):
+                remaining = multiplier
+                while multiplier > 0:
+                    if multiplier < 1 and random.random() > multiplier:
+                        break
                     if queue.qsize() > len_limit:
                         drop_counter.count()
                     else:
                         queue.put(q)
+                    multiplier -= 1
 
 
 class Worker(object):
@@ -198,7 +202,7 @@ def setup_options():
     parser.add_option("--threads", dest="threads", type=int, default=1, action="store", help=u"number of gevent threads")
     parser.add_option("--upstream", dest="upstream", default="", action="store", help=u"host:port to send HTTP requests to")
 
-    parser.add_option("--multiplier", dest="multiplier", type=int, default=1, action="store", help=u"traffic multiplier")
+    parser.add_option("--multiplier", dest="multiplier", type=float, default=1, action="store", help=u"traffic multiplier")
 
     parser.add_option("--only-GET", dest="only_get", default=False, action="store_true", help=u"forward only GET requests")
     parser.add_option("--location-prefix", dest="location_prefix", default="", action="store", help=u"prefix to add to URLs")

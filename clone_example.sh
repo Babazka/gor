@@ -27,8 +27,11 @@ IFACE=eth1
 # what traffic should we clone
 PCAP_FILTER='(dst net 192.168.7.96/27) && ((tcp dst port 80) || (tcp dst portrange 9090-9100))'
 
-# multiply captured requests N times
+# multiply captured requests N times inside replay server
 TRAFFIC_MULTIPLIER=1
+
+# also multiplier, but inside the listener (not recommended)
+LISTENER_TRAFFIC_MULTIPLIER=1
 
 # who recieves cloned traffic
 DEST_HOST_PORT=192.168.142.132:80
