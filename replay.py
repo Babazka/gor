@@ -70,6 +70,7 @@ class Listener(object):
     def runloop(self):
         i = self.i
         queue = self.queue
+        multiplier = options.multiplier
         incoming_requests_counter = Counter('input')
 
         if statsd_client:
@@ -89,10 +90,11 @@ class Listener(object):
             incoming_requests_counter.count()
             logger.debug('Listener %d got %s', i, q)
             if queue:
-                if queue.qsize() > len_limit:
-                    drop_counter.count()
-                else:
-                    queue.put(q)
+                for i in xrange(multiplier):
+                    if queue.qsize() > len_limit:
+                        drop_counter.count()
+                    else:
+                        queue.put(q)
 
 
 class Worker(object):
@@ -195,6 +197,8 @@ def setup_options():
     parser.add_option("--socket", dest="unix_socket", default="/tmp/mysock.dgram.0", action="store", help=u"path to unix seqpacket socket")
     parser.add_option("--threads", dest="threads", type=int, default=1, action="store", help=u"number of gevent threads")
     parser.add_option("--upstream", dest="upstream", default="", action="store", help=u"host:port to send HTTP requests to")
+
+    parser.add_option("--multiplier", dest="multiplier", type=int, default=1, action="store", help=u"traffic multiplier")
 
     parser.add_option("--only-GET", dest="only_get", default=False, action="store_true", help=u"forward only GET requests")
     parser.add_option("--location-prefix", dest="location_prefix", default="", action="store", help=u"prefix to add to URLs")
