@@ -20,7 +20,7 @@ function start_replays() {
         python replay.py $STATSD \
             --socket="$UNIX_SOCKET_PATH.$i" \
             --threads $THREADS --backlog $BACKLOG \
-            --multiply $TRAFFIC_MULTIPLIER \
+            --multiplier $TRAFFIC_MULTIPLIER \
             --upstream "$DEST_HOST_PORT" $EXTRA_REPLAY_PARAMS > /dev/null &
         REPLAY_PID=$!
         echo $REPLAY_PID >>$FILE_WITH_PIDS
