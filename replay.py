@@ -91,14 +91,14 @@ class Listener(object):
             logger.debug('Listener %d got %s', i, q)
             if queue:
                 remaining = multiplier
-                while multiplier > 0:
-                    if multiplier < 1 and random.random() > multiplier:
+                while remaining > 0:
+                    if remaining < 1 and random.random() > remaining:
                         break
                     if queue.qsize() > len_limit:
                         drop_counter.count()
                     else:
                         queue.put(q)
-                    multiplier -= 1
+                    remaining -= 1
 
 
 class Worker(object):
