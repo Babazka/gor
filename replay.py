@@ -70,7 +70,7 @@ class Listener(object):
     def runloop(self):
         i = self.i
         queue = self.queue
-        multiplier = options.multiplier
+        multiplier = self.options.multiplier
         incoming_requests_counter = Counter('input')
 
         if statsd_client:
