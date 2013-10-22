@@ -4,7 +4,6 @@ from gevent import monkey
 monkey.patch_all()
 
 import os
-import random
 import sys
 import logging
 import socket
@@ -91,27 +90,22 @@ class Listener(object):
             incoming_requests_counter.count()
             logger.debug('Listener %d got %s', i, q)
             if queue:
-                remaining = multiplier
-                while remaining > 0:
-                    if remaining < 1 and random.random() > remaining:
-                        break
+                for _ in xrange(multiplier):
                     if queue.qsize() > len_limit:
                         drop_counter.count()
                     else:
                         queue.put(q)
-                    remaining -= 1
 
 
 class Worker(object):
     """ Берет запрос из очереди, быстренько парсит и отправляет в апстрим по keepalive-соединению """
-    def __init__(self, i, queue, output_counter, parse_errors_counter, c400s, c500s, options):
+    def __init__(self, i, queue, output_counter, parse_errors_counter, options):
         self.i = i
         self.queue = queue
         self.output_counter = output_counter
         self.parse_errors_counter = parse_errors_counter
         self.running = True
         self.options = options
-        self.c400s, self.c500s = c400s, c500s
 
     def connect(self):
         conn = None
@@ -203,7 +197,7 @@ def setup_options():
     parser.add_option("--threads", dest="threads", type=int, default=1, action="store", help=u"number of gevent threads")
     parser.add_option("--upstream", dest="upstream", default="", action="store", help=u"host:port to send HTTP requests to")
 
-    parser.add_option("--multiplier", dest="multiplier", type=float, default=1, action="store", help=u"traffic multiplier")
+    parser.add_option("--multiplier", dest="multiplier", type=int, default=1, action="store", help=u"traffic multiplier")
 
     parser.add_option("--only-GET", dest="only_get", default=False, action="store_true", help=u"forward only GET requests")
     parser.add_option("--location-prefix", dest="location_prefix", default="", action="store", help=u"prefix to add to URLs")
@@ -254,14 +248,12 @@ def main():
 
     total_output_counter = Counter('worker_output')
     parse_errors_counter = Counter('parse_errors')
-    c400s = Counter('response_400s')
-    c500s = Counter('response_500s')
 
     queue = gevent.queue.Queue(maxsize=options.backlog)
 
     listener = Listener(0, conn, queue, options)
     listener_thread = gevent.spawn(listener.runloop)
-    workers = [Worker(i, queue, total_output_counter, parse_errors_counter, c400s, c500s, options) for i in xrange(options.threads)]
+    workers = [Worker(i, queue, total_output_counter, parse_errors_counter, options) for i in xrange(options.threads)]
     threads = [gevent.spawn(worker.runloop) for worker in workers]
     listener_thread.join()
 
