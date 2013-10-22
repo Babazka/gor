@@ -49,9 +49,8 @@ L_PACKET_LIMIT=100000
 # HTTP requests per second (limited in listener)
 L_HTTP_LIMIT=25000
 
-# HTTP requests per second (limited in replay server)
-REPLAY_RATE_LIMIT=25000
-
+# HTTP requests per second (limited in replay server; per replay server)
+REPLAY_RATE_LIMIT=$((25000/$REPLAY_COUNT))
 
 # extra params to pass to replay server
 EXTRA_REPLAY_PARAMS=
