@@ -60,11 +60,6 @@ class Listener(object):
 
     def next_query(self):
         pkt = self.unixsock.recv(16384)
-        if len(pkt) == 0:
-            logger.warning('Listener %d got empty packet, assuming disconnect', self.i)
-            self.running = False
-            return ''
-        #pkt = pkt[6:]
         return pkt
 
     def runloop(self):
@@ -129,7 +124,6 @@ class Worker(object):
         only_get = self.options.only_get
         host_header = self.options.host_header
         location_prefix = self.options.location_prefix
-        c400s, c500s = self.c400s, self.c500s
 
         while self.running:
             q = queue.get()
@@ -140,23 +134,22 @@ class Worker(object):
                 header_lines = headers.split('\r\n')
                 method, url, _ = header_lines[0].split(' ', 2)
                 if method not in methodset:
-                    if method.endswith('POST'):
-                        method = 'POST'
-                    elif method.endswith('GET'):
-                        method = 'GET'
-                    else:
-                        parse_errors.count()
-                        continue
+                    parse_errors.count()
+                    continue
+
                 if only_get and method != 'GET':
                     continue
+
                 if location_prefix:
                     url = location_prefix + url
+
                 def split_lower_1(line):
                     parts = line.split(':', 1)
                     if len(parts) == 1:
                         return '', ''
                     a, b = parts
                     return a.lower(), b.strip()
+
                 headers_dict_raw = dict(map(split_lower_1, header_lines))
                 logger.debug([method, url])
                 headers_dict = {}
@@ -211,16 +204,6 @@ def setup_options():
     parser.add_option("--loglevel", action="store", dest="loglevel", default='INFO', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
                       help=u"Уровень логгирования скрипта")
     return parser.parse_args()
-
-
-def get_seqpacket_socket(addr):
-    unixsock = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
-    unixsock.bind(addr)
-    unixsock.listen(1)
-
-    logger.info('accepting connection...')
-    conn, addr = unixsock.accept()
-    return conn
 
 
 def get_dgram_socket(addr):
