@@ -197,7 +197,7 @@ def setup_options():
     parser.add_option("--upstream", dest="upstream", default="", action="store", help=u"host:port to send HTTP requests to")
 
     parser.add_option("--multiplier", dest="multiplier", type=int, default=1, action="store", help=u"traffic multiplier")
-    parser.add_option("--rate-limit", dest="rate-limit", type=int, default=0, action="store", help=u"output rate limit after multiplication, requests per second")
+    parser.add_option("--rate-limit", dest="rate_limit", type=int, default=0, action="store", help=u"output rate limit after multiplication, requests per second")
 
     parser.add_option("--only-GET", dest="only_get", default=False, action="store_true", help=u"forward only GET requests")
     parser.add_option("--location-prefix", dest="location_prefix", default="", action="store", help=u"prefix to add to URLs")
