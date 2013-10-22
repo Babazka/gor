@@ -159,7 +159,7 @@ class Worker(object):
                 headers_dict_raw = dict(map(split_lower_1, header_lines))
                 logger.debug([method, url])
                 headers_dict = {}
-                headers_dict['Content-Type'] = headers_dict_raw.get('content-type', 'text/plain').split(';')[0]
+                headers_dict['Content-Type'] = headers_dict_raw.get('content-type', 'text/plain')
                 headers_dict['X-Real-IP'] = headers_dict_raw.get('x-real-ip', '127.0.0.1')
                 if host_header:
                     headers_dict['Host'] = host_header
