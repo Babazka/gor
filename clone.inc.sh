@@ -1,3 +1,10 @@
+# default variable values
+
+if [[ -z "$REPLAY_RATE_LIMIT" ]]
+then
+    REPLAY_RATE_LIMIT=0
+fi
+
 # general functions for traffic cloning setup
 
 function kill_old_replays() {
@@ -21,6 +28,7 @@ function start_replays() {
             --socket="$UNIX_SOCKET_PATH.$i" \
             --threads $THREADS --backlog $BACKLOG \
             --multiplier $TRAFFIC_MULTIPLIER \
+            --rate-limit $REPLAY_RATE_LIMIT \
             --upstream "$DEST_HOST_PORT" $EXTRA_REPLAY_PARAMS > /dev/null &
         REPLAY_PID=$!
         echo $REPLAY_PID >>$FILE_WITH_PIDS

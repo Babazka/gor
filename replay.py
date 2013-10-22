@@ -26,7 +26,7 @@ statsd_client = None
 
 class Counter(object):
     """ Считает число событий за последнюю секунду, умеет отправлять в statsd """
-    def __init__(self, name):
+    def __init__(self, name=None):
         self.name = name
         self.v = 0
         self.t = int(time.time())
@@ -34,9 +34,10 @@ class Counter(object):
     def count(self):
         t = int(time.time())
         if t != self.t:
-            logger.info('C %s: %d per second', self.name, self.v)
-            if statsd_client:
-                statsd_client.incr(self.name, self.v)
+            if self.name:
+                logger.info('C %s: %d per second', self.name, self.v)
+                if statsd_client:
+                    statsd_client.incr(self.name, self.v)
             self.on_tick()
             self.v = 1
             self.t = t
@@ -66,6 +67,7 @@ class Listener(object):
         i = self.i
         queue = self.queue
         multiplier = self.options.multiplier
+        rate_limit = self.options.rate_limit
         incoming_requests_counter = Counter('input')
 
         if statsd_client:
@@ -75,6 +77,7 @@ class Listener(object):
             incoming_requests_counter.on_tick = on_tick
 
         drop_counter = Counter('dropped')
+        multiplied_output_counter = Counter()
         logger.info('Listener %d started', i)
         len_limit = self.options.backlog - self.options.backlog_breathing_space
 
@@ -86,6 +89,9 @@ class Listener(object):
             logger.debug('Listener %d got %s', i, q)
             if queue:
                 for _ in xrange(multiplier):
+                    multiplied_output_counter.count()
+                    if rate_limit > 0 and multiplied_output_counter.v >= rate_limit:
+                        continue
                     if queue.qsize() > len_limit:
                         drop_counter.count()
                     else:
@@ -191,6 +197,7 @@ def setup_options():
     parser.add_option("--upstream", dest="upstream", default="", action="store", help=u"host:port to send HTTP requests to")
 
     parser.add_option("--multiplier", dest="multiplier", type=int, default=1, action="store", help=u"traffic multiplier")
+    parser.add_option("--rate-limit", dest="rate-limit", type=int, default=0, action="store", help=u"output rate limit after multiplication, requests per second")
 
     parser.add_option("--only-GET", dest="only_get", default=False, action="store_true", help=u"forward only GET requests")
     parser.add_option("--location-prefix", dest="location_prefix", default="", action="store", help=u"prefix to add to URLs")

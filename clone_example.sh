@@ -27,6 +27,13 @@ IFACE=eth1
 # what traffic should we clone
 PCAP_FILTER='(dst net 192.168.7.96/27) && ((tcp dst port 80) || (tcp dst portrange 9090-9100))'
 
+## How multiplying and limits work:
+#
+# sniffed traffic limited to L_PACKET_LIMIT ->
+# -> HTTP requests ->
+# -> multiplication by LISTENER_TRAFFIC_MULTIPLIER -> limit to L_HTTP_LIMIT ->
+# -> multiplication by TRAFFIC_MULTIPLIER -> limit to REPLAY_RATE_LIMIT -> output
+
 # multiply captured requests N times inside replay server
 TRAFFIC_MULTIPLIER=1
 
@@ -39,8 +46,12 @@ DEST_HOST_PORT=192.168.142.132:80
 # limits on sniffing:
 # IP packets per second
 L_PACKET_LIMIT=100000
-# HTTP requests per second
+# HTTP requests per second (limited in listener)
 L_HTTP_LIMIT=25000
+
+# HTTP requests per second (limited in replay server)
+REPLAY_RATE_LIMIT=25000
+
 
 # extra params to pass to replay server
 EXTRA_REPLAY_PARAMS=
