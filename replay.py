@@ -69,6 +69,9 @@ class Listener(object):
         multiplier = self.options.multiplier
         rate_limit = self.options.rate_limit
         incoming_requests_counter = Counter('input')
+        record_file = None
+        if self.options.record_file:
+            record_file = open(self.options.record_file, 'w')
 
         if statsd_client:
             def on_tick():
@@ -85,6 +88,8 @@ class Listener(object):
             q = self.next_query()
             if not q:
                 continue
+            if record_file:
+                print >>record_file, q
             incoming_requests_counter.count()
             logger.debug('Listener %d got %s', i, q)
             if queue:
@@ -202,6 +207,8 @@ def setup_options():
     parser.add_option("--only-GET", dest="only_get", default=False, action="store_true", help=u"forward only GET requests")
     parser.add_option("--location-prefix", dest="location_prefix", default="", action="store", help=u"prefix to add to URLs")
     parser.add_option("--host-header", dest="host_header", default="", action="store", help=u"set host header")
+
+    parser.add_option("--record-to-file", dest="record_file", default="", action="store", help=u"record requests to file")
 
     parser.add_option("--statsd", dest="statsd", default="", action="store", help=u"host:port of statsd")
 
