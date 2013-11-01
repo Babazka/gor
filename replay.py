@@ -181,9 +181,12 @@ class Worker(object):
 
             if conn:
                 try:
+                    t0 = time.time()
                     conn.request(method, url, body, headers_dict)
                     r = conn.getresponse()
                     resp_data = r.read()
+                    t1 = time.time()
+                    statsd_client.timing('response_time', (t1 - t0) * 1000, rate=0.1)
                     if 400 <= r.status < 600 and statsd_client:
                         statsd_client.incr('response_%d' % r.status, rate=0.1)
                         logger.debug('response code %d: %s', r.status, resp_data)
