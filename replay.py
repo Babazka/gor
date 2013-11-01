@@ -137,6 +137,7 @@ class Worker(object):
         host_header = self.options.host_header
         location_grep = self.options.location_grep
         location_prefix = self.options.location_prefix
+        print_urls = self.options.print_urls
 
         while self.running:
             q = queue.get()
@@ -158,6 +159,9 @@ class Worker(object):
 
                 if location_grep and not re.search(location_grep, url):
                     continue
+
+                if print_urls:
+                    print >>sys.stderr, 'URL', url
 
                 def split_lower_1(line):
                     parts = line.split(':', 1)
@@ -216,6 +220,7 @@ def setup_options():
     parser.add_option("--location-prefix", dest="location_prefix", default="", action="store", help=u"prefix to add to URLs")
     parser.add_option("--location-grep", dest="location_grep", default="", action="store", help=u"replay only requests which match this regex")
     parser.add_option("--host-header", dest="host_header", default="", action="store", help=u"set host header")
+    parser.add_option("--print-urls", dest="print_urls", default=False, action="store_true", help=u"print replayed urls to stderr")
 
     parser.add_option("--record-to-file", dest="record_file", default="", action="store", help=u"record requests to file")
 
