@@ -4,6 +4,7 @@ from gevent import monkey
 monkey.patch_all()
 
 import os
+import re
 import sys
 import logging
 import socket
@@ -134,6 +135,7 @@ class Worker(object):
         methodset = set(['GET', 'POST', 'PUT', 'DELETE', 'HEAD'])
         only_get = self.options.only_get
         host_header = self.options.host_header
+        location_grep = self.options.location_grep
         location_prefix = self.options.location_prefix
 
         while self.running:
@@ -153,6 +155,9 @@ class Worker(object):
 
                 if location_prefix:
                     url = location_prefix + url
+
+                if location_grep and not re.search(location_grep, url):
+                    continue
 
                 def split_lower_1(line):
                     parts = line.split(':', 1)
@@ -209,6 +214,7 @@ def setup_options():
 
     parser.add_option("--only-GET", dest="only_get", default=False, action="store_true", help=u"forward only GET requests")
     parser.add_option("--location-prefix", dest="location_prefix", default="", action="store", help=u"prefix to add to URLs")
+    parser.add_option("--location-grep", dest="location_grep", default="", action="store", help=u"replay only requests which match this regex")
     parser.add_option("--host-header", dest="host_header", default="", action="store", help=u"set host header")
 
     parser.add_option("--record-to-file", dest="record_file", default="", action="store", help=u"record requests to file")
