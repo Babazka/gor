@@ -109,7 +109,7 @@ class Listener(object):
     def filter_by_location(self, q, location_grep):
         try:
             headers, _ = q.split('\r\n\r\n', 1)
-            first_line = headers.split('\r\n', 1)
+            first_line = headers.split('\r\n', 1)[0]
             _, url, _ = first_line.split(' ', 2)
             if re.search(location_grep, url):
                 return True
