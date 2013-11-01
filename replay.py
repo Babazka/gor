@@ -69,6 +69,7 @@ class Listener(object):
         queue = self.queue
         multiplier = self.options.multiplier
         rate_limit = self.options.rate_limit
+        location_grep = self.options.location_grep
         incoming_requests_counter = Counter('input')
         record_file = None
         if self.options.record_file:
@@ -89,6 +90,8 @@ class Listener(object):
             q = self.next_query()
             if not q:
                 continue
+            if location_grep and not self.filter_by_location(q, location_grep):
+                continue
             if record_file:
                 print >>record_file, q
             incoming_requests_counter.count()
@@ -102,6 +105,17 @@ class Listener(object):
                         drop_counter.count()
                     else:
                         queue.put(q)
+
+    def filter_by_location(self, q, location_grep):
+        try:
+            headers, _ = q.split('\r\n\r\n', 1)
+            first_line = headers.split('\r\n', 1)
+            _, url, _ = first_line.split(' ', 2)
+            if re.search(location_grep, url):
+                return True
+        except:
+            logging.exception('parse error')
+        return False
 
 
 class Worker(object):
@@ -135,7 +149,6 @@ class Worker(object):
         methodset = set(['GET', 'POST', 'PUT', 'DELETE', 'HEAD'])
         only_get = self.options.only_get
         host_header = self.options.host_header
-        location_grep = self.options.location_grep
         location_prefix = self.options.location_prefix
         print_urls = self.options.print_urls
 
@@ -156,9 +169,6 @@ class Worker(object):
 
                 if location_prefix:
                     url = location_prefix + url
-
-                if location_grep and not re.search(location_grep, url):
-                    continue
 
                 if print_urls:
                     print >>sys.stderr, 'URL', url

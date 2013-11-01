@@ -29,7 +29,7 @@ function start_replays() {
             --threads $THREADS --backlog $BACKLOG \
             --multiplier $TRAFFIC_MULTIPLIER \
             --rate-limit $REPLAY_RATE_LIMIT \
-            --upstream "$DEST_HOST_PORT" $EXTRA_REPLAY_PARAMS > /dev/null &
+            --upstream "$DEST_HOST_PORT" $EXTRA_REPLAY_PARAMS $REPLAY_EXTRA_PARAMS > /dev/null &
         REPLAY_PID=$!
         echo $REPLAY_PID >>$FILE_WITH_PIDS
         echo "pid = $REPLAY_PID started"
